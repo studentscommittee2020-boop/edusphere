@@ -44,16 +44,16 @@ INSERT INTO public.courses (code, title, title_fr, credits, semester, major, typ
 -- ============================================================================
 
 INSERT INTO public.courses (code, title, title_fr, credits, semester, major, type, track) VALUES
-  ('fa1',  'Operations Research',  'RO',                     5,   'LS4', 'Audit', 'major', 'french'),
-  ('fa2',  'Money & Banking',      'Monnaie et Banque',      5,   'LS4', 'Audit', 'major', 'french'),
-  ('fa3',  'Personal Accounting',  'Compta des Personnes',   5,   'LS4', 'Audit', 'major', 'french'),
-  ('fa4',  'Banking Accounting',   'Compta Bancaire',        5,   'LS5', 'Audit', 'major', 'french'),
-  ('fa5',  'Internal Audit',       'Audit Interne',          5,   'LS5', 'Audit', 'major', 'french'),
-  ('fa6',  'Banking Law',          'Droits Bancaires',       2.5, 'LS5', 'Audit', 'major', 'french'),
-  ('fa7',  'Tax Accounting',       'Compta Fiscale',         5,   'LS5', 'Audit', 'major', 'french'),
-  ('fa8',  'Audit Methodology',    'Metho. d''Audit',        5,   'LS6', 'Audit', 'major', 'french'),
-  ('fa9',  'Capital Accounting',   'Compta des Capitaux',    5,   'LS6', 'Audit', 'major', 'french'),
-  ('fa10', 'Cost Accounting 2',    'Compta Analytique 2',    5,   'LS6', 'Audit', 'major', 'french');
+  ('fa1',  'Operations Research',  'RO',                     5,   'LS4', 'Audit & Accounting', 'major', 'french'),
+  ('fa2',  'Money & Banking',      'Monnaie et Banque',      5,   'LS4', 'Audit & Accounting', 'major', 'french'),
+  ('fa3',  'Personal Accounting',  'Compta des Personnes',   5,   'LS4', 'Audit & Accounting', 'major', 'french'),
+  ('fa4',  'Banking Accounting',   'Compta Bancaire',        5,   'LS5', 'Audit & Accounting', 'major', 'french'),
+  ('fa5',  'Internal Audit',       'Audit Interne',          5,   'LS5', 'Audit & Accounting', 'major', 'french'),
+  ('fa6',  'Banking Law',          'Droits Bancaires',       2.5, 'LS5', 'Audit & Accounting', 'major', 'french'),
+  ('fa7',  'Tax Accounting',       'Compta Fiscale',         5,   'LS5', 'Audit & Accounting', 'major', 'french'),
+  ('fa8',  'Audit Methodology',    'Metho. d''Audit',        5,   'LS6', 'Audit & Accounting', 'major', 'french'),
+  ('fa9',  'Capital Accounting',   'Compta des Capitaux',    5,   'LS6', 'Audit & Accounting', 'major', 'french'),
+  ('fa10', 'Cost Accounting 2',    'Compta Analytique 2',    5,   'LS6', 'Audit & Accounting', 'major', 'french');
 
 -- ============================================================================
 -- COURSES: French Track -- Finance (LS4-LS6)
@@ -144,16 +144,16 @@ INSERT INTO public.courses (code, title, title_fr, credits, semester, major, typ
 -- ============================================================================
 
 INSERT INTO public.courses (code, title, title_fr, credits, semester, major, type, track) VALUES
-  ('ea1',  'Operations Research',  'Operations Research',  5,   'LS4', 'Audit', 'major', 'english'),
-  ('ea2',  'Money & Banking',      'Money & Banking',      5,   'LS4', 'Audit', 'major', 'english'),
-  ('ea3',  'Personal Accounting',  'Personal Accounting',  5,   'LS4', 'Audit', 'major', 'english'),
-  ('ea4',  'Banking Accounting',   'Banking Accounting',   5,   'LS5', 'Audit', 'major', 'english'),
-  ('ea5',  'Internal Audit',       'Internal Audit',       5,   'LS5', 'Audit', 'major', 'english'),
-  ('ea6',  'Banking Law',          'Banking Law',          2.5, 'LS5', 'Audit', 'major', 'english'),
-  ('ea7',  'Tax Accounting',       'Tax Accounting',       5,   'LS5', 'Audit', 'major', 'english'),
-  ('ea8',  'Audit Methodology',    'Audit Methodology',    5,   'LS6', 'Audit', 'major', 'english'),
-  ('ea9',  'Capital Accounting',   'Capital Accounting',   5,   'LS6', 'Audit', 'major', 'english'),
-  ('ea10', 'Cost Accounting 2',    'Cost Accounting 2',    5,   'LS6', 'Audit', 'major', 'english');
+  ('ea1',  'Operations Research',  'Operations Research',  5,   'LS4', 'Audit & Accounting', 'major', 'english'),
+  ('ea2',  'Money & Banking',      'Money & Banking',      5,   'LS4', 'Audit & Accounting', 'major', 'english'),
+  ('ea3',  'Personal Accounting',  'Personal Accounting',  5,   'LS4', 'Audit & Accounting', 'major', 'english'),
+  ('ea4',  'Banking Accounting',   'Banking Accounting',   5,   'LS5', 'Audit & Accounting', 'major', 'english'),
+  ('ea5',  'Internal Audit',       'Internal Audit',       5,   'LS5', 'Audit & Accounting', 'major', 'english'),
+  ('ea6',  'Banking Law',          'Banking Law',          2.5, 'LS5', 'Audit & Accounting', 'major', 'english'),
+  ('ea7',  'Tax Accounting',       'Tax Accounting',       5,   'LS5', 'Audit & Accounting', 'major', 'english'),
+  ('ea8',  'Audit Methodology',    'Audit Methodology',    5,   'LS6', 'Audit & Accounting', 'major', 'english'),
+  ('ea9',  'Capital Accounting',   'Capital Accounting',   5,   'LS6', 'Audit & Accounting', 'major', 'english'),
+  ('ea10', 'Cost Accounting 2',    'Cost Accounting 2',    5,   'LS6', 'Audit & Accounting', 'major', 'english');
 
 -- ============================================================================
 -- PREVIOUS EXAMS
@@ -162,40 +162,40 @@ INSERT INTO public.courses (code, title, title_fr, credits, semester, major, typ
 
 INSERT INTO public.previous_exams (course_id, course_title, course_title_fr, major, semester, year, exam_type, pages, rating, track) VALUES
   -- French track exams
-  ((SELECT id FROM public.courses WHERE code = 'fc1'),  'Accounting 1',       'Comptabilite 1',               'Common',     'LS1', '2024', 'partiel', 4, 4.5, 'french'),
-  ((SELECT id FROM public.courses WHERE code = 'fc2'),  'Math 1',             'Maths 1',                      'Common',     'LS1', '2024', 'midterm', 3, 4.2, 'french'),
-  ((SELECT id FROM public.courses WHERE code = 'fc4'),  'Microeconomics',     'Microeconomie',                'Common',     'LS1', '2023', 'partiel', 5, 4.8, 'french'),
-  ((SELECT id FROM public.courses WHERE code = 'fc8'),  'Accounting 2',       'Comptabilite 2',               'Common',     'LS2', '2024', 'partiel', 6, 4.3, 'french'),
-  ((SELECT id FROM public.courses WHERE code = 'fc9'),  'Marketing',          'Marketing',                    'Common',     'LS2', '2024', 'midterm', 4, 4.0, 'french'),
+  ((SELECT id FROM public.courses WHERE code = 'fc1'),  'Accounting 1',       'Comptabilite 1',               'Common',     'LS1', '2024', 'final', 4, 4.5, 'french'),
+  ((SELECT id FROM public.courses WHERE code = 'fc2'),  'Math 1',             'Maths 1',                      'Common',     'LS1', '2024', 'midterms', 3, 4.2, 'french'),
+  ((SELECT id FROM public.courses WHERE code = 'fc4'),  'Microeconomics',     'Microeconomie',                'Common',     'LS1', '2023', 'final', 5, 4.8, 'french'),
+  ((SELECT id FROM public.courses WHERE code = 'fc8'),  'Accounting 2',       'Comptabilite 2',               'Common',     'LS2', '2024', 'final', 6, 4.3, 'french'),
+  ((SELECT id FROM public.courses WHERE code = 'fc9'),  'Marketing',          'Marketing',                    'Common',     'LS2', '2024', 'midterms', 4, 4.0, 'french'),
   ((SELECT id FROM public.courses WHERE code = 'fc10'), 'Statistics 1',       'Statistiques 1',               'Common',     'LS2', '2023', 'resit',   3, 3.8, 'french'),
-  ((SELECT id FROM public.courses WHERE code = 'fc18'), 'Financial Analysis', 'Analyse Financiere',           'Common',     'LS3', '2024', 'partiel', 5, 4.6, 'french'),
-  ((SELECT id FROM public.courses WHERE code = 'fc15'), 'HR Management',      'GRH',                          'Common',     'LS3', '2023', 'midterm', 4, 4.1, 'french'),
-  ((SELECT id FROM public.courses WHERE code = 'fa1'),  'Operations Research','RO',                           'Audit',      'LS4', '2024', 'partiel', 5, 4.4, 'french'),
-  ((SELECT id FROM public.courses WHERE code = 'fa5'),  'Internal Audit',     'Audit Interne',                'Audit',      'LS5', '2024', 'partiel', 6, 4.7, 'french'),
-  ((SELECT id FROM public.courses WHERE code = 'fa7'),  'Tax Accounting',     'Compta Fiscale',               'Audit',      'LS5', '2023', 'midterm', 4, 4.2, 'french'),
-  ((SELECT id FROM public.courses WHERE code = 'fa8'),  'Audit Methodology',  'Metho. d''Audit',              'Audit',      'LS6', '2024', 'partiel', 7, 4.9, 'french'),
-  ((SELECT id FROM public.courses WHERE code = 'ff1'),  'Financial Markets',  'Marches Financiers',           'Finance',    'LS4', '2024', 'partiel', 5, 4.5, 'french'),
-  ((SELECT id FROM public.courses WHERE code = 'ff2'),  'Corporate Finance',  'Finance d''Entreprise',        'Finance',    'LS4', '2023', 'midterm', 4, 4.3, 'french'),
-  ((SELECT id FROM public.courses WHERE code = 'ff6'),  'Financial Risk',     'Risque Financier',             'Finance',    'LS6', '2024', 'partiel', 6, 4.6, 'french'),
-  ((SELECT id FROM public.courses WHERE code = 'fmk1'), 'Consumer Behavior',  'Comportement du Consommateur', 'Marketing',  'LS4', '2024', 'partiel', 4, 4.2, 'french'),
-  ((SELECT id FROM public.courses WHERE code = 'fmk2'), 'Digital Marketing',  'Marketing Digital',            'Marketing',  'LS4', '2023', 'midterm', 3, 4.0, 'french'),
-  ((SELECT id FROM public.courses WHERE code = 'fmg1'), 'Strategic Management','Management Strategique',      'Management', 'LS4', '2024', 'partiel', 5, 4.5, 'french'),
-  ((SELECT id FROM public.courses WHERE code = 'fmis1'),'Database Systems',   'Systemes de BD',               'MIS',        'LS4', '2024', 'partiel', 6, 4.8, 'french'),
-  ((SELECT id FROM public.courses WHERE code = 'fmis3'),'Business Intelligence','Intelligence d''Affaires',   'MIS',        'LS5', '2023', 'midterm', 4, 4.4, 'french'),
+  ((SELECT id FROM public.courses WHERE code = 'fc18'), 'Financial Analysis', 'Analyse Financiere',           'Common',     'LS3', '2024', 'final', 5, 4.6, 'french'),
+  ((SELECT id FROM public.courses WHERE code = 'fc15'), 'HR Management',      'GRH',                          'Common',     'LS3', '2023', 'midterms', 4, 4.1, 'french'),
+  ((SELECT id FROM public.courses WHERE code = 'fa1'),  'Operations Research','RO',                           'Audit & Accounting', 'LS4', '2024', 'final',   5, 4.4, 'french'),
+  ((SELECT id FROM public.courses WHERE code = 'fa5'),  'Internal Audit',     'Audit Interne',                'Audit & Accounting', 'LS5', '2024', 'final',   6, 4.7, 'french'),
+  ((SELECT id FROM public.courses WHERE code = 'fa7'),  'Tax Accounting',     'Compta Fiscale',               'Audit & Accounting', 'LS5', '2023', 'midterms', 4, 4.2, 'french'),
+  ((SELECT id FROM public.courses WHERE code = 'fa8'),  'Audit Methodology',  'Metho. d''Audit',              'Audit & Accounting', 'LS6', '2024', 'final',   7, 4.9, 'french'),
+  ((SELECT id FROM public.courses WHERE code = 'ff1'),  'Financial Markets',  'Marches Financiers',           'Finance',    'LS4', '2024', 'final', 5, 4.5, 'french'),
+  ((SELECT id FROM public.courses WHERE code = 'ff2'),  'Corporate Finance',  'Finance d''Entreprise',        'Finance',    'LS4', '2023', 'midterms', 4, 4.3, 'french'),
+  ((SELECT id FROM public.courses WHERE code = 'ff6'),  'Financial Risk',     'Risque Financier',             'Finance',    'LS6', '2024', 'final', 6, 4.6, 'french'),
+  ((SELECT id FROM public.courses WHERE code = 'fmk1'), 'Consumer Behavior',  'Comportement du Consommateur', 'Marketing',  'LS4', '2024', 'final', 4, 4.2, 'french'),
+  ((SELECT id FROM public.courses WHERE code = 'fmk2'), 'Digital Marketing',  'Marketing Digital',            'Marketing',  'LS4', '2023', 'midterms', 3, 4.0, 'french'),
+  ((SELECT id FROM public.courses WHERE code = 'fmg1'), 'Strategic Management','Management Strategique',      'Management', 'LS4', '2024', 'final', 5, 4.5, 'french'),
+  ((SELECT id FROM public.courses WHERE code = 'fmis1'),'Database Systems',   'Systemes de BD',               'MIS',        'LS4', '2024', 'final', 6, 4.8, 'french'),
+  ((SELECT id FROM public.courses WHERE code = 'fmis3'),'Business Intelligence','Intelligence d''Affaires',   'MIS',        'LS5', '2023', 'midterms', 4, 4.4, 'french'),
   -- English track exams
-  ((SELECT id FROM public.courses WHERE code = 'ec1'),  'Accounting 1',       'Accounting 1',                 'Common',     'LS1', '2024', 'partiel', 4, 4.4, 'english'),
-  ((SELECT id FROM public.courses WHERE code = 'ec4'),  'Microeconomics',     'Microeconomics',               'Common',     'LS1', '2023', 'midterm', 3, 4.1, 'english'),
-  ((SELECT id FROM public.courses WHERE code = 'ec8'),  'Accounting 2',       'Accounting 2',                 'Common',     'LS2', '2024', 'partiel', 5, 4.3, 'english'),
-  ((SELECT id FROM public.courses WHERE code = 'ec18'), 'Financial Analysis', 'Financial Analysis',           'Common',     'LS3', '2024', 'partiel', 5, 4.5, 'english'),
-  ((SELECT id FROM public.courses WHERE code = 'ea5'),  'Internal Audit',     'Internal Audit',               'Audit',      'LS5', '2024', 'partiel', 6, 4.6, 'english'),
-  ((SELECT id FROM public.courses WHERE code = 'ea8'),  'Audit Methodology',  'Audit Methodology',            'Audit',      'LS6', '2023', 'resit',   4, 3.9, 'english'),
+  ((SELECT id FROM public.courses WHERE code = 'ec1'),  'Accounting 1',       'Accounting 1',                 'Common',     'LS1', '2024', 'final', 4, 4.4, 'english'),
+  ((SELECT id FROM public.courses WHERE code = 'ec4'),  'Microeconomics',     'Microeconomics',               'Common',     'LS1', '2023', 'midterms', 3, 4.1, 'english'),
+  ((SELECT id FROM public.courses WHERE code = 'ec8'),  'Accounting 2',       'Accounting 2',                 'Common',     'LS2', '2024', 'final', 5, 4.3, 'english'),
+  ((SELECT id FROM public.courses WHERE code = 'ec18'), 'Financial Analysis', 'Financial Analysis',           'Common',     'LS3', '2024', 'final', 5, 4.5, 'english'),
+  ((SELECT id FROM public.courses WHERE code = 'ea5'),  'Internal Audit',     'Internal Audit',               'Audit & Accounting', 'LS5', '2024', 'final',   6, 4.6, 'english'),
+  ((SELECT id FROM public.courses WHERE code = 'ea8'),  'Audit Methodology',  'Audit Methodology',            'Audit & Accounting', 'LS6', '2023', 'resit',   4, 3.9, 'english'),
   -- 2025 exams
-  ((SELECT id FROM public.courses WHERE code = 'fc12'), 'Macroeconomics',     'Macroeconomie',                'Common',     'LS2', '2025', 'partiel', 4, 4.7, 'french'),
-  ((SELECT id FROM public.courses WHERE code = 'fc16'), 'Financial Math',     'Maths Finance',                'Common',     'LS3', '2025', 'midterm', 3, 4.2, 'french'),
-  ((SELECT id FROM public.courses WHERE code = 'fmg7'), 'Entrepreneurship',   'Entrepreneuriat',              'Management', 'LS6', '2025', 'partiel', 5, 4.8, 'french'),
-  ((SELECT id FROM public.courses WHERE code = 'fmis6'),'Data Science',       'Science des Donnees',          'MIS',        'LS6', '2025', 'partiel', 6, 4.9, 'french'),
-  ((SELECT id FROM public.courses WHERE code = 'ff7'),  'Financial Modeling', 'Modelisation Financiere',      'Finance',    'LS6', '2025', 'midterm', 5, 4.7, 'french'),
-  ((SELECT id FROM public.courses WHERE code = 'fmk6'), 'International Marketing','Marketing International',  'Marketing',  'LS6', '2025', 'partiel', 4, 4.5, 'french');
+  ((SELECT id FROM public.courses WHERE code = 'fc12'), 'Macroeconomics',     'Macroeconomie',                'Common',     'LS2', '2025', 'final', 4, 4.7, 'french'),
+  ((SELECT id FROM public.courses WHERE code = 'fc16'), 'Financial Math',     'Maths Finance',                'Common',     'LS3', '2025', 'midterms', 3, 4.2, 'french'),
+  ((SELECT id FROM public.courses WHERE code = 'fmg7'), 'Entrepreneurship',   'Entrepreneuriat',              'Management', 'LS6', '2025', 'final', 5, 4.8, 'french'),
+  ((SELECT id FROM public.courses WHERE code = 'fmis6'),'Data Science',       'Science des Donnees',          'MIS',        'LS6', '2025', 'final', 6, 4.9, 'french'),
+  ((SELECT id FROM public.courses WHERE code = 'ff7'),  'Financial Modeling', 'Modelisation Financiere',      'Finance',    'LS6', '2025', 'midterms', 5, 4.7, 'french'),
+  ((SELECT id FROM public.courses WHERE code = 'fmk6'), 'International Marketing','Marketing International',  'Marketing',  'LS6', '2025', 'final', 4, 4.5, 'french');
 
 -- ============================================================================
 -- ENTRANCE EXAMS
@@ -282,8 +282,8 @@ INSERT INTO public.books (title, title_fr, author, price, rating, major, semeste
   ('Marketing Essentials',            'Fondamentaux du Marketing',        'Kotler & Armstrong',        2600, 4.6, 'Common',     'LS2',          TRUE,  ARRAY['fc9'],               'both'),
   ('Business Statistics',             'Statistiques de Gestion',          'Groebner et al.',           2400, 4.3, 'Common',     'LS2, LS3',     TRUE,  ARRAY['fc10'],              'both'),
   ('Financial Statement Analysis',    'Analyse des Etats Financiers',     'White & Sondhi',            3200, 4.7, 'Common',     'LS3',          TRUE,  ARRAY['fc18'],              'both'),
-  ('Auditing and Assurance',          'Audit et Assurance',               'Arens & Elder',             3500, 4.8, 'Audit',      'LS5, LS6',     TRUE,  ARRAY['fa5','fa8'],         'both'),
-  ('Tax Accounting Guide',            'Guide de Comptabilite Fiscale',    'Pratt & Kulsrud',           2900, 4.5, 'Audit',      'LS5',          TRUE,  ARRAY['fa7'],               'french'),
+  ('Auditing and Assurance',          'Audit et Assurance',               'Arens & Elder',             3500, 4.8, 'Audit & Accounting', 'LS5, LS6',     TRUE,  ARRAY['fa5','fa8'],         'both'),
+  ('Tax Accounting Guide',            'Guide de Comptabilite Fiscale',    'Pratt & Kulsrud',           2900, 4.5, 'Audit & Accounting', 'LS5',          TRUE,  ARRAY['fa7'],               'french'),
   ('Corporate Finance',               'Finance d''Entreprise',            'Brealey & Myers',           3800, 4.9, 'Finance',    'LS4, LS5',     TRUE,  ARRAY['ff2','ff6'],         'both'),
   ('Investment Analysis',             'Analyse des Investissements',      'Reilly & Brown',            3400, 4.6, 'Finance',    'LS4, LS5',     FALSE, ARRAY['ff1','ff4'],         'both'),
   ('Financial Derivatives',           'Produits Derives Financiers',      'Hull',                      4000, 4.7, 'Finance',    'LS6',          TRUE,  ARRAY['ff8'],               'both'),
@@ -294,10 +294,10 @@ INSERT INTO public.books (title, title_fr, author, price, rating, major, semeste
   ('Database Systems',                'Systemes de Bases de Donnees',     'Connolly & Begg',           3300, 4.7, 'MIS',        'LS4, LS5',     TRUE,  ARRAY['fmis1','fmis3'],     'both'),
   ('Cybersecurity Fundamentals',      'Fondamentaux de la Cybersecurite', 'Kim & Solomon',             3000, 4.5, 'MIS',        'LS5',          TRUE,  ARRAY['fmis5'],             'both'),
   ('Data Science from Scratch',       'Science des Donnees',              'Joel Grus',                 2900, 4.6, 'MIS',        'LS6',          TRUE,  ARRAY['fmis6'],             'english'),
-  ('Operations Research',             'Recherche Operationnelle',         'Hillier & Lieberman',       3200, 4.7, 'Audit',      'LS4',          TRUE,  ARRAY['fa1','ea1'],         'both'),
+  ('Operations Research',             'Recherche Operationnelle',         'Hillier & Lieberman',       3200, 4.7, 'Audit & Accounting', 'LS4',          TRUE,  ARRAY['fa1','ea1'],         'both'),
   ('International Marketing',         'Marketing International',          'Cateora & Graham',          2800, 4.4, 'Marketing',  'LS6',          TRUE,  ARRAY['fmk6'],              'both'),
   ('Entrepreneurship',                'Entrepreneuriat',                  'Hisrich & Peters',          2600, 4.3, 'Management', 'LS6',          FALSE, ARRAY['fmg7'],              'both'),
-  ('Money Banking and Finance',       'Monnaie Banque et Finance',        'Mishkin',                   3100, 4.6, 'Audit',      'LS4',          TRUE,  ARRAY['fa2','ea2'],         'both'),
+  ('Money Banking and Finance',       'Monnaie Banque et Finance',        'Mishkin',                   3100, 4.6, 'Audit & Accounting',      'LS4',          TRUE,  ARRAY['fa2','ea2'],         'both'),
   ('ERP with SAP',                    'ERP avec SAP',                     'Magal & Word',              3400, 4.5, 'MIS',        'LS5',          TRUE,  ARRAY['fmis4'],             'both');
 
 -- ============================================================================
