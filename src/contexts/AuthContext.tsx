@@ -60,12 +60,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return data as Profile | null;
   }, []);
 
-  const checkAdmin = useCallback(async (email: string) => {
-    const { data } = await supabase
-      .from("admin_emails")
-      .select("email")
-      .eq("email", email)
-      .single();
+  const checkAdmin = useCallback(async () => {
+    const { data } = await supabase.rpc("is_admin");
     return !!data;
   }, []);
 
@@ -74,7 +70,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (sess?.user) {
         const [prof, adminFlag] = await Promise.all([
           fetchProfile(sess.user.id),
-          checkAdmin(sess.user.email ?? ""),
+          checkAdmin(),
         ]);
         setUser(sess.user);
         setSession(sess);
@@ -146,9 +142,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const updateProfile = useCallback(
     async (updates: Partial<Profile>) => {
       if (!user) return { data: null, error: new Error("Not authenticated") };
+      // Strip role field to prevent privilege escalation
+      const { role: _stripped, ...safeUpdates } = updates as Record<string, unknown>;
       const { data, error } = await supabase
         .from("profiles")
-        .update(updates)
+        .update(safeUpdates)
         .eq("id", user.id)
         .select()
         .single();

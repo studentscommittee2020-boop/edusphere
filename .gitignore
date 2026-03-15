@@ -10,9 +10,10 @@ node_modules/
 dist/
 dist-ssr/
 
-# editor
+# editor / tooling
 .vscode/*
 !.vscode/extensions.json
+.claude/
 *.suo
 *.ntvs*
 *.njsproj

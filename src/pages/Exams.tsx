@@ -1,7 +1,7 @@
 import { useState, useMemo } from "react";
 import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
-import { BookOpen, Download, Star, ChevronRight, FolderOpen } from "lucide-react";
+import { BookOpen, Download, ChevronRight, FolderOpen } from "lucide-react";
 import { useAppStore } from "@/store/appStore";
 import FilterChips, { ActiveFilter } from "@/components/FilterChips";
 import { toast } from "sonner";

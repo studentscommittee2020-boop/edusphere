@@ -325,11 +325,26 @@ export async function updateOrderStatus(
 
 // ── File Upload ──────────────────────────────────────────────────────────────
 
+const ALLOWED_MIME: Record<string, string[]> = {
+  "exam-papers": ["application/pdf"],
+  "book-covers": ["image/jpeg", "image/png", "image/webp"],
+  avatars: ["image/jpeg", "image/png", "image/webp"],
+};
+const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
+
 export async function uploadFile(
   bucket: "exam-papers" | "book-covers" | "avatars",
   path: string,
   file: File
 ) {
+  if (file.size > MAX_FILE_SIZE) {
+    return { url: null, error: new Error("File exceeds 10 MB limit") };
+  }
+  const allowed = ALLOWED_MIME[bucket];
+  if (allowed && !allowed.includes(file.type)) {
+    return { url: null, error: new Error(`Invalid file type. Allowed: ${allowed.join(", ")}`) };
+  }
+
   const { data, error } = await supabase.storage
     .from(bucket)
     .upload(path, file, { upsert: true });

@@ -33,10 +33,11 @@ Features: exam archive, entrance exams, campus events, book ordering, admin pane
 ```
 src/
   components/    → Reusable UI components
+  contexts/      → React context providers (AuthContext)
   pages/         → Route-level page components
-  lib/           → Utilities (cn, supabase client)
-  store/         → Zustand global state
-  hooks/         → Custom React hooks
+  lib/           → Utilities (cn, escapeLike, supabase client)
+  store/         → Zustand global state (language, cart UI)
+  data/          → Mock data (legacy, to be replaced by services)
   types/         → TypeScript type definitions
   services/      → Supabase service layer (queries, mutations)
 supabase/
@@ -83,6 +84,13 @@ Tables: `profiles`, `courses`, `previous_exams`, `entrance_exams`, `books`, `eve
 - **Fonts**: Syne (display/headings), DM Sans (body)
 - **Border Radius**: 1rem base (`rounded-xl`)
 
+## Security
+- All SECURITY DEFINER functions use `SET search_path = public`
+- Search inputs are sanitized via `escapeLike()` before use in `.ilike` filters
+- `SUPABASE_SERVICE_ROLE_KEY` has no `VITE_` prefix — never exposed to the browser
+- Admin access is server-enforced via RLS + `is_admin()` function
+- File uploads validate bucket names (enum-typed parameter)
+
 ## Key Rules
 - All data fetched from Supabase (no hardcoded mock data in production)
 - Bilingual: every user-facing string must support FR/EN
@@ -90,4 +98,5 @@ Tables: `profiles`, `courses`, `previous_exams`, `entrance_exams`, `books`, `eve
 - Admin access gated by `admin_emails` table allowlist
 - File uploads to Supabase Storage (exam PDFs go to `exam-papers`, book covers to `book-covers`, avatars to `avatars`)
 - Never log or commit the `SUPABASE_SERVICE_ROLE_KEY`
-- Use `useAuth()` hook (not Zustand) for authentication state
+- Use `useAuth()` from `@/contexts/AuthContext` for authentication state
+- Always use `escapeLike()` when interpolating user input into `.ilike` or `.or` filters

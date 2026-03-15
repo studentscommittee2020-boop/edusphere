@@ -1,4 +1,5 @@
 import { supabase } from "@/lib/supabase";
+import { escapeLike } from "@/lib/utils";
 
 export interface CourseFilters {
   major?: string;
@@ -30,8 +31,9 @@ export async function getCourses(filters?: CourseFilters) {
     query = query.eq("type", filters.type);
   }
   if (filters?.search) {
+    const q = escapeLike(filters.search);
     query = query.or(
-      `title.ilike.%${filters.search}%,title_fr.ilike.%${filters.search}%,code.ilike.%${filters.search}%`
+      `title.ilike.%${q}%,title_fr.ilike.%${q}%,code.ilike.%${q}%`
     );
   }
 

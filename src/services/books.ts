@@ -1,4 +1,5 @@
 import { supabase } from "@/lib/supabase";
+import { escapeLike } from "@/lib/utils";
 
 export interface BookFilters {
   major?: string;
@@ -25,8 +26,9 @@ export async function getBooks(filters?: BookFilters) {
     query = query.eq("in_stock", true);
   }
   if (filters?.search) {
+    const q = escapeLike(filters.search);
     query = query.or(
-      `title.ilike.%${filters.search}%,title_fr.ilike.%${filters.search}%,author.ilike.%${filters.search}%`
+      `title.ilike.%${q}%,title_fr.ilike.%${q}%,author.ilike.%${q}%`
     );
   }
 

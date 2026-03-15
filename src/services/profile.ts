@@ -15,9 +15,11 @@ export async function getProfile(userId: string) {
 // ── Profile Update ────────────────────────────────────────────────────────────
 
 export async function updateProfile(userId: string, updates: Partial<Profile>) {
+  // Strip role field — only the database trigger/admin should set roles
+  const { role: _stripped, ...safeUpdates } = updates as Record<string, unknown>;
   const { data, error } = await supabase
     .from("profiles")
-    .update(updates)
+    .update(safeUpdates)
     .eq("id", userId)
     .select()
     .single();
@@ -26,7 +28,17 @@ export async function updateProfile(userId: string, updates: Partial<Profile>) {
 
 // ── Avatar Upload ─────────────────────────────────────────────────────────────
 
+const AVATAR_ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp"];
+const AVATAR_MAX_SIZE = 5 * 1024 * 1024; // 5 MB
+
 export async function uploadAvatar(userId: string, file: File) {
+  if (file.size > AVATAR_MAX_SIZE) {
+    return { url: null, error: new Error("Avatar exceeds 5 MB limit") };
+  }
+  if (!AVATAR_ALLOWED_TYPES.includes(file.type)) {
+    return { url: null, error: new Error("Invalid image type. Use JPEG, PNG, or WebP.") };
+  }
+
   const ext = file.name.split(".").pop();
   const path = `${userId}/avatar.${ext}`;
 
@@ -96,18 +108,6 @@ export async function getRecommendedExams(
     p_semester: semester ?? null,
     p_limit: limit,
   });
-  return { data, error };
-}
-
-// ── Upcoming Events (for dashboard) ──────────────────────────────────────────
-
-export async function getUpcomingEvents(limit = 3) {
-  const { data, error } = await supabase
-    .from("events")
-    .select("id, title, date, time, location, tag, attendees")
-    .eq("type", "upcoming")
-    .order("date", { ascending: true })
-    .limit(limit);
   return { data, error };
 }
 

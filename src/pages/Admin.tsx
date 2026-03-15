@@ -535,7 +535,6 @@ export default function Admin() {
 
       toast.success(language === "fr" ? "Fichier lié avec succès" : "File linked successfully!", { id: toastId });
     } catch (error: any) {
-      console.error("Upload error:", error);
       toast.error(error.message || "Upload failed", { id: toastId });
     }
   };

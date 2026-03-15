@@ -1,4 +1,5 @@
 import { supabase } from "@/lib/supabase";
+import { escapeLike } from "@/lib/utils";
 
 // ── Events Query ──────────────────────────────────────────────────────────────
 
@@ -27,8 +28,9 @@ export async function getEvents(type?: "upcoming" | "past", filters?: EventFilte
     query = query.eq("tag", filters.tag);
   }
   if (filters?.search) {
+    const q = escapeLike(filters.search);
     query = query.or(
-      `title.ilike.%${filters.search}%,description.ilike.%${filters.search}%`
+      `title.ilike.%${q}%,description.ilike.%${q}%`
     );
   }
 

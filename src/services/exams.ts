@@ -1,4 +1,5 @@
 import { supabase } from "@/lib/supabase";
+import { escapeLike } from "@/lib/utils";
 
 // ── Filters ───────────────────────────────────────────────────────────────────
 
@@ -43,8 +44,9 @@ export async function getPreviousExams(filters?: ExamFilters) {
     query = query.eq("track", filters.track);
   }
   if (filters?.search) {
+    const q = escapeLike(filters.search);
     query = query.or(
-      `course_title.ilike.%${filters.search}%,course_title_fr.ilike.%${filters.search}%`
+      `course_title.ilike.%${q}%,course_title_fr.ilike.%${q}%`
     );
   }
 
