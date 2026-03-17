@@ -75,23 +75,70 @@
   /* Mesh / atmospheric */
   .bg-mesh {
     background:
-      radial-gradient(ellipse at 15% 20%, hsla(0,72%,51%,0.08) 0%, transparent 50%),
-      radial-gradient(ellipse at 85% 80%, hsla(145,63%,42%,0.06) 0%, transparent 50%);
+      radial-gradient(ellipse at 15% 20%, hsla(0,72%,51%,0.15) 0%, transparent 50%),
+      radial-gradient(ellipse at 85% 80%, hsla(145,63%,42%,0.12) 0%, transparent 50%);
   }
   .bg-mesh-intense {
     background:
-      radial-gradient(ellipse at 20% 30%, hsla(0,72%,51%,0.14) 0%, transparent 50%),
-      radial-gradient(ellipse at 80% 70%, hsla(145,63%,42%,0.10) 0%, transparent 50%);
+      radial-gradient(ellipse at 20% 30%, hsla(0,72%,51%,0.22) 0%, transparent 50%),
+      radial-gradient(ellipse at 80% 70%, hsla(145,63%,42%,0.16) 0%, transparent 50%);
   }
   .bg-grid {
     background-image:
-      linear-gradient(hsla(0,0%,100%,0.03) 1px, transparent 1px),
-      linear-gradient(90deg, hsla(0,0%,100%,0.03) 1px, transparent 1px);
+      linear-gradient(hsla(0,0%,100%,0.05) 1px, transparent 1px),
+      linear-gradient(90deg, hsla(0,0%,100%,0.05) 1px, transparent 1px);
     background-size: 60px 60px;
   }
   .bg-dots {
     background-image: radial-gradient(hsla(0,0%,100%,0.07) 1px, transparent 1px);
     background-size: 24px 24px;
+  }
+
+  /* Animated floating orbs */
+  .bg-orb-red {
+    position: absolute;
+    width: 500px;
+    height: 500px;
+    border-radius: 50%;
+    background: radial-gradient(circle, hsla(0,72%,51%,0.18) 0%, transparent 70%);
+    filter: blur(80px);
+    animation: float-orb-1 20s ease-in-out infinite;
+  }
+  .bg-orb-green {
+    position: absolute;
+    width: 400px;
+    height: 400px;
+    border-radius: 50%;
+    background: radial-gradient(circle, hsla(145,63%,42%,0.14) 0%, transparent 70%);
+    filter: blur(80px);
+    animation: float-orb-2 25s ease-in-out infinite;
+  }
+  .bg-orb-amber {
+    position: absolute;
+    width: 350px;
+    height: 350px;
+    border-radius: 50%;
+    background: radial-gradient(circle, hsla(35,100%,55%,0.10) 0%, transparent 70%);
+    filter: blur(80px);
+    animation: float-orb-3 22s ease-in-out infinite;
+  }
+
+  @keyframes float-orb-1 {
+    0%, 100% { transform: translate(0, 0); }
+    25%      { transform: translate(80px, -60px); }
+    50%      { transform: translate(-40px, 80px); }
+    75%      { transform: translate(60px, 40px); }
+  }
+  @keyframes float-orb-2 {
+    0%, 100% { transform: translate(0, 0); }
+    25%      { transform: translate(-70px, 50px); }
+    50%      { transform: translate(60px, -70px); }
+    75%      { transform: translate(-50px, -30px); }
+  }
+  @keyframes float-orb-3 {
+    0%, 100% { transform: translate(0, 0); }
+    33%      { transform: translate(50px, 60px); }
+    66%      { transform: translate(-60px, -40px); }
   }
 
   /* Card glow */
