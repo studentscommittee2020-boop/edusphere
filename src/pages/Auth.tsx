@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { GraduationCap, Mail, Lock, User, ArrowRight, Eye, EyeOff, Loader2 } from "lucide-react";
+import { Mail, Lock, User, ArrowRight, Eye, EyeOff, Loader2 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
 
@@ -83,12 +83,10 @@ export default function Auth() {
         {/* Logo */}
         <div className="text-center mb-8">
           <div className="inline-flex items-center gap-3">
-            <div className="w-12 h-12 bg-red-500/15 border border-red-500/20 rounded-xl flex items-center justify-center">
-              <GraduationCap className="w-7 h-7 text-red-400" />
-            </div>
+            <img src="/logo.svg" alt="EduSphere logo" className="w-12 h-12 rounded-xl bg-white p-0.5" />
             <div className="text-left">
               <h1 className="text-xl font-bold text-white tracking-tight" style={{ fontFamily: "'Syne', sans-serif" }}>
-                FSEG 2
+                EduSphere
               </h1>
               <p className="text-xs text-neutral-500">StudentHub</p>
             </div>
@@ -227,7 +225,7 @@ export default function Auth() {
         </div>
 
         <p className="text-center text-xs text-neutral-600 mt-6">
-          FSEG 2 — Faculty of Economic Sciences &amp; Management
+          EduSphere — Faculty of Economic Sciences &amp; Management
         </p>
       </motion.div>
     </div>
