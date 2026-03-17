@@ -160,10 +160,12 @@ export default function Sidebar({ cartPanelOpen, setCartPanelOpen }: SidebarProp
       {/* ── Logo ──────────────────────────────────────────────────────────── */}
       <div className="px-5 pt-6 pb-4">
         <div className="flex items-center gap-3">
-          <img src="/logo.svg" alt="EduSphere logo" className="w-9 h-9 shrink-0 rounded-lg bg-white p-0.5" />
+          <div className="w-9 h-9 rounded-xl bg-gradient-red flex items-center justify-center shrink-0">
+            <GraduationCap className="w-5 h-5 text-white" />
+          </div>
           <div className="leading-tight">
             <p className="font-display font-bold text-[15px] text-white tracking-tight">
-              EduSphere
+              FSEG <span className="text-red-500">2</span>
             </p>
             <p className="font-display font-medium text-[11px] text-neutral-500 tracking-wide">
               StudentHub
@@ -391,9 +393,11 @@ export default function Sidebar({ cartPanelOpen, setCartPanelOpen }: SidebarProp
         </button>
 
         <div className="flex items-center gap-2.5">
-          <img src="/logo.svg" alt="EduSphere logo" className="w-7 h-7 rounded-md bg-white p-0.5" />
+          <div className="w-7 h-7 rounded-lg bg-gradient-red flex items-center justify-center">
+            <GraduationCap className="w-4 h-4 text-white" />
+          </div>
           <span className="font-display font-bold text-sm text-white">
-            EduSphere
+            FSEG <span className="text-red-500">2</span>
           </span>
         </div>
 

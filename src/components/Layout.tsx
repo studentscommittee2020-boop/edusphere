@@ -10,7 +10,7 @@ export default function Layout() {
     <div className="min-h-screen bg-background relative">
       <Sidebar cartPanelOpen={cartPanelOpen} setCartPanelOpen={setCartPanelOpen} />
 
-      <main className="lg:pl-[260px] min-h-screen relative z-10">
+      <main className="lg:pl-[260px] min-h-screen relative">
         <div className="pt-14 lg:pt-0">
           <Outlet context={{ setCartPanelOpen }} />
         </div>
