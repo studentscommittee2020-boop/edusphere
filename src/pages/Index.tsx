@@ -8,7 +8,6 @@ import {
   ShoppingCart,
   ArrowRight,
   GraduationCap,
-  Star,
   MapPin,
   Clock,
   Tag,
@@ -60,24 +59,6 @@ function SectionHeader({
         {linkLabel}
         <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
       </Link>
-    </div>
-  );
-}
-
-/** Renders a row of filled/empty stars */
-function Stars({ rating, max = 5 }: { rating: number; max?: number }) {
-  return (
-    <div className="flex items-center gap-0.5">
-      {Array.from({ length: max }, (_, i) => (
-        <Star
-          key={i}
-          className={`w-3 h-3 ${
-            i < Math.round(rating)
-              ? "fill-amber-400 text-amber-400"
-              : "text-neutral-700"
-          }`}
-        />
-      ))}
     </div>
   );
 }
@@ -270,10 +251,9 @@ export default function Index() {
                 {language === "fr" ? exam.courseTitleFr : exam.courseTitle}
               </h3>
 
-              {/* Meta */}
-              <div className="flex items-center justify-between mt-auto">
+              {/* Year */}
+              <div className="mt-auto">
                 <span className="text-xs text-neutral-500">{exam.year}</span>
-                <Stars rating={exam.rating} />
               </div>
             </div>
           ))}
@@ -392,12 +372,9 @@ export default function Index() {
                       DZD
                     </span>
                   </span>
-                  <div className="flex items-center gap-1">
-                    <Star className="w-3 h-3 fill-amber-400 text-amber-400" />
-                    <span className="text-xs font-semibold text-white">
-                      {book.rating}
-                    </span>
-                  </div>
+                  <span className="text-xs text-neutral-500">
+                    {book.major}
+                  </span>
                 </div>
               </div>
             </div>
