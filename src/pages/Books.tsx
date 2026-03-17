@@ -1,7 +1,7 @@
 import { useState, useMemo } from "react";
 import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
-import { ShoppingCart, Star, Package, ChevronRight, Check, FolderOpen } from "lucide-react";
+import { ShoppingCart, Package, ChevronRight, Check, FolderOpen } from "lucide-react";
 import { toast } from "sonner";
 import { useAppStore } from "@/store/appStore";
 import FilterChips, { ActiveFilter } from "@/components/FilterChips";
@@ -75,7 +75,7 @@ export default function Books() {
     <div className="min-h-screen relative">
       <div className="absolute inset-0 bg-mesh pointer-events-none" />
 
-      <div className="relative px-6 py-8 max-w-7xl mx-auto">
+      <div className="relative px-4 sm:px-6 py-6 sm:py-8 max-w-7xl mx-auto">
         {/* Breadcrumb */}
         <motion.div
           initial={{ opacity: 0, y: -10 }}

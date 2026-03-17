@@ -1,7 +1,7 @@
 import { useState, useMemo } from "react";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { Link } from "react-router-dom";
-import { FileText, Download, ChevronDown, ChevronRight, Search, FolderOpen } from "lucide-react";
+import { FileText, Download, ChevronDown, ChevronRight, Search, FolderOpen, SlidersHorizontal, X } from "lucide-react";
 import { useAppStore } from "@/store/appStore";
 import FilterChips, { ActiveFilter } from "@/components/FilterChips";
 import { toast } from "sonner";
@@ -82,6 +82,7 @@ export default function Sessions() {
   const [examType, setExamType] = useState("All");
   const [year, setYear] = useState("All");
   const [track, setTrack] = useState("All");
+  const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
 
   const filtered = useMemo(() => {
     return previousExams.filter((exam) => {
@@ -125,7 +126,7 @@ export default function Sessions() {
     <div className="min-h-screen relative">
       <div className="absolute inset-0 bg-mesh pointer-events-none" />
 
-      <div className="relative px-6 py-8 max-w-7xl mx-auto">
+      <div className="relative px-4 sm:px-6 py-6 sm:py-8 max-w-7xl mx-auto">
         {/* Breadcrumb */}
         <motion.div
           initial={{ opacity: 0, y: -10 }}
@@ -195,6 +196,71 @@ export default function Sessions() {
             />
           </motion.div>
         )}
+
+        {/* Mobile filter button */}
+        <div className="md:hidden mb-5">
+          <button
+            onClick={() => setMobileFiltersOpen(true)}
+            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-card border border-border text-sm font-display font-semibold text-foreground hover:bg-muted transition-colors"
+          >
+            <SlidersHorizontal className="w-4 h-4" />
+            {language === "fr" ? "Filtres" : "Filters"}
+            {activeFilters.length > 0 && (
+              <span className="px-1.5 py-0.5 rounded-full bg-primary/15 text-primary text-[10px] font-bold">
+                {activeFilters.length}
+              </span>
+            )}
+          </button>
+        </div>
+
+        {/* Mobile filter drawer */}
+        <AnimatePresence>
+          {mobileFiltersOpen && (
+            <>
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                onClick={() => setMobileFiltersOpen(false)}
+                className="md:hidden fixed inset-0 bg-black/60 backdrop-blur-sm z-50"
+              />
+              <motion.div
+                initial={{ x: -300 }}
+                animate={{ x: 0 }}
+                exit={{ x: -300 }}
+                transition={{ type: "spring", damping: 30, stiffness: 300 }}
+                className="md:hidden fixed left-0 top-0 h-full w-72 bg-card border-r border-border z-50 overflow-y-auto shadow-2xl"
+              >
+                <div className="flex items-center justify-between px-4 py-3 border-b border-border">
+                  <p className="font-display font-semibold text-sm text-foreground">
+                    {language === "fr" ? "Filtres" : "Filters"}
+                  </p>
+                  <button
+                    onClick={() => setMobileFiltersOpen(false)}
+                    className="p-1.5 rounded-lg hover:bg-muted transition-colors"
+                  >
+                    <X className="w-5 h-5 text-muted-foreground" />
+                  </button>
+                </div>
+                <FilterGroup title={language === "fr" ? "Filière" : "Major"} options={MAJORS} value={major} onChange={setMajor} />
+                <FilterGroup title={language === "fr" ? "Semestre" : "Semester"} options={SEMESTERS} value={semester} onChange={setSemester} />
+                <FilterGroup title={language === "fr" ? "Type d'examen" : "Exam Type"} options={EXAM_TYPES} value={examType} onChange={setExamType} />
+                <FilterGroup title={language === "fr" ? "Année" : "Year"} options={YEARS} value={year} onChange={setYear} />
+                <FilterGroup title={language === "fr" ? "Filière linguistique" : "Track"} options={TRACKS} value={track} onChange={setTrack} />
+                {activeFilters.length > 0 && (
+                  <div className="px-4 py-3">
+                    <button
+                      onClick={() => { clearAllFilters(); setMobileFiltersOpen(false); }}
+                      className="w-full py-2 rounded-xl bg-primary/10 text-primary text-sm font-medium hover:bg-primary/20 transition-colors"
+                    >
+                      {language === "fr" ? "Réinitialiser" : "Reset All"}
+                    </button>
+                  </div>
+                )}
+              </motion.div>
+            </>
+          )}
+        </AnimatePresence>
 
         <div className="flex gap-6">
           {/* Sidebar Filters */}

@@ -558,7 +558,7 @@ export default function Admin() {
   return (
     <div className="min-h-screen relative">
       <div className="absolute inset-0 bg-mesh pointer-events-none" />
-      <div className="relative px-6 py-8 max-w-6xl mx-auto">
+      <div className="relative px-4 sm:px-6 py-6 sm:py-8 max-w-6xl mx-auto">
         {/* Breadcrumb */}
         <div className="flex items-center gap-2 text-sm text-muted-foreground mb-6">
           <Link to="/" className="hover:text-foreground transition-colors">

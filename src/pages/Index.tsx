@@ -148,7 +148,7 @@ export default function Index() {
   // ---- Render ----
 
   return (
-    <div className="px-6 py-8 max-w-7xl mx-auto space-y-10">
+    <div className="px-4 sm:px-6 py-6 sm:py-8 max-w-7xl mx-auto space-y-8 sm:space-y-10">
       {/* ------------------------------------------------------------------ */}
       {/* WELCOME HEADER                                                     */}
       {/* ------------------------------------------------------------------ */}
@@ -203,7 +203,7 @@ export default function Index() {
               {stat.icon}
             </div>
             <div>
-              <p className="font-display font-bold text-3xl text-white leading-none">
+              <p className="font-display font-bold text-2xl sm:text-3xl text-white leading-none">
                 {stat.value}
               </p>
               <p className="text-sm text-neutral-400 mt-1">{stat.label}</p>

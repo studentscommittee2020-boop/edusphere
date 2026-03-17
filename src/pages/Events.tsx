@@ -159,7 +159,7 @@ export default function Events() {
     <div className="min-h-screen relative">
       <div className="absolute inset-0 bg-mesh pointer-events-none" />
 
-      <div className="relative px-6 py-8 max-w-7xl mx-auto">
+      <div className="relative px-4 sm:px-6 py-6 sm:py-8 max-w-7xl mx-auto">
         {/* Breadcrumb */}
         <motion.div
           initial={{ opacity: 0, y: -10 }}

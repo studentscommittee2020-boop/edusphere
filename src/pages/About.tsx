@@ -76,7 +76,7 @@ export default function About() {
   ];
 
   return (
-    <div className="px-6 py-8 max-w-5xl mx-auto space-y-12">
+    <div className="px-4 sm:px-6 py-6 sm:py-8 max-w-5xl mx-auto space-y-10 sm:space-y-12">
       {/* ── Hero ── */}
       <motion.section
         variants={fadeUp}
