@@ -55,15 +55,33 @@ const AuthContext = createContext<AuthContextValue | null>(null);
 // ── Provider ──────────────────────────────────────────────────────────────────
 
 export function AuthProvider({ children }: { children: ReactNode }) {
+  // ── Dev-only role preview ───────────────────────────────────────────────
+  // Read BEFORE the state below so the faked flags can seed the initial state
+  // synchronously. Applying them in an effect instead left a window in which
+  // `isLoading` was already false while the role flags were still at their
+  // defaults — any route guard that evaluated during that window saw a guest
+  // and redirected away. Whether you are authenticated must not depend on
+  // effect ordering.
+  //
+  // `import.meta.env.DEV` is a build-time constant, so this whole branch is
+  // removed from a production bundle — see src/lib/devAuth.ts. It fakes only
+  // the client's view of who you are; every Supabase query still runs
+  // unauthenticated and RLS still governs all data.
+  const devAccount = import.meta.env.DEV ? getDevRole() : null;
+
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
-  const [profile, setProfile] = useState<Profile | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isAdmin, setIsAdmin] = useState(false);
-  const [isOwner, setIsOwner] = useState(false);
-  const [isDoctor, setIsDoctor] = useState(false);
-  const [isCommitteeAdmin, setIsCommitteeAdmin] = useState(false);
-  const [isVerifiedStudent, setIsVerifiedStudent] = useState(false);
+  const [profile, setProfile] = useState<Profile | null>(devAccount?.profile ?? null);
+  const [isLoading, setIsLoading] = useState(!devAccount);
+  const [isAdmin, setIsAdmin] = useState(devAccount?.isAdmin ?? false);
+  const [isOwner, setIsOwner] = useState(devAccount?.isOwner ?? false);
+  const [isDoctor, setIsDoctor] = useState(devAccount?.isDoctor ?? false);
+  const [isCommitteeAdmin, setIsCommitteeAdmin] = useState(
+    devAccount?.isCommitteeAdmin ?? false,
+  );
+  const [isVerifiedStudent, setIsVerifiedStudent] = useState(
+    devAccount?.isVerifiedStudent ?? false,
+  );
 
   // ── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -135,25 +153,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     },
     [fetchProfile, checkAdmin, checkOwner]
   );
-
-  // ── Dev-only role preview ───────────────────────────────────────────────
-  // Short-circuits the real session so role-gated UI can be inspected without
-  // credentials or applied migrations. `import.meta.env.DEV` is a build-time
-  // constant, so this whole branch is removed from a production bundle — see
-  // src/lib/devAuth.ts. It fakes only the client's view of who you are; every
-  // Supabase query still runs unauthenticated and RLS still governs all data.
-  const devAccount = import.meta.env.DEV ? getDevRole() : null;
-
-  useEffect(() => {
-    if (!devAccount) return;
-    setProfile(devAccount.profile);
-    setIsAdmin(devAccount.isAdmin);
-    setIsOwner(devAccount.isOwner);
-    setIsDoctor(devAccount.isDoctor);
-    setIsCommitteeAdmin(devAccount.isCommitteeAdmin);
-    setIsVerifiedStudent(devAccount.isVerifiedStudent);
-    setIsLoading(false);
-  }, [devAccount]);
 
   // ── Boot: get existing session ───────────────────────────────────────────────
 

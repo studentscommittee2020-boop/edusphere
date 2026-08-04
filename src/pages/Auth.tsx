@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import type { AuthError } from "@supabase/supabase-js";
+import { isAuthRetryableFetchError, type AuthError } from "@supabase/supabase-js";
 import {
   ArrowLeft,
   ArrowRight,
@@ -38,6 +38,17 @@ const t = (lang: string, fr: string, en: string) => (lang === "fr" ? fr : en);
 // @supabase/auth-js/dist/module/lib/error-codes.d.ts) — branch on that, not on
 // `.message` text, which can change between server versions.
 function describeStaffOtpRequestError(error: AuthError, language: string): string {
+  if (isAuthRetryableFetchError(error)) {
+    // Network-level failure — the request never reached Supabase at all (no
+    // response, so no .code). Confirmed live: a blocked/unreachable network
+    // surfaces exactly this, and it must not be reported as if the email was bad.
+    return t(
+      language,
+      "Impossible de joindre le service de connexion. Vérifiez votre connexion et réessayez.",
+      "Could not reach the sign-in service. Check your connection and try again.",
+    );
+  }
+
   switch (error.code) {
     case "email_address_not_authorized":
       // The single most likely failure during review launch: Supabase's default
@@ -77,6 +88,14 @@ function describeStaffOtpRequestError(error: AuthError, language: string): strin
 }
 
 function describeStaffOtpVerifyError(error: AuthError, language: string): string {
+  if (isAuthRetryableFetchError(error)) {
+    return t(
+      language,
+      "Impossible de joindre le service de connexion. Vérifiez votre connexion et réessayez.",
+      "Could not reach the sign-in service. Check your connection and try again.",
+    );
+  }
+
   switch (error.code) {
     case "over_request_rate_limit":
     case "over_email_send_rate_limit":
