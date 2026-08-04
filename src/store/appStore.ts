@@ -2,7 +2,7 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { 
   frenchCourses, englishCourses, 
-  defaultPreviousExams, defaultBooks, 
+  defaultPreviousExams,
   defaultExams, defaultEvents 
 } from "@/data/mockData";
 
@@ -17,11 +17,6 @@ export interface PreviousExam {
   examType: "midterms" | "final" | "resit"; pages: number; rating: number;
   track: "french" | "english";
   fileUrl?: string;
-}
-export interface Book {
-  id: number; title: string; titleFr: string; author: string;
-  price: number; rating: number; major: string; semesters: string;
-  inStock: boolean; relatedCourses: string[]; track: "french" | "english" | "both";
 }
 export interface Exam {
   id: string; title: string; titleFr: string; subject: string;
@@ -40,22 +35,15 @@ interface AppState {
   // Data
   courses: Course[];
   previousExams: PreviousExam[];
-  books: Book[];
   exams: Exam[];
   events: EventItem[];
   // UI State
   language: "fr" | "en";
-  cart: number[];
   // Actions
   setLanguage: (lang: "fr" | "en") => void;
-  addToCart: (bookId: number) => void;
-  removeFromCart: (bookId: number) => void;
-  clearCart: () => void;
   addPreviousExam: (exam: PreviousExam) => void;
   removePreviousExam: (id: string) => void;
   updatePreviousExam: (exam: PreviousExam) => void;
-  addBook: (book: Book) => void;
-  removeBook: (id: number) => void;
   addExam: (exam: Exam) => void;
   removeExam: (id: string) => void;
   updateExam: (exam: Exam) => void;
@@ -70,22 +58,12 @@ export const useAppStore = create<AppState>()(
       // ── Initial Data ──────────────────────────────────────────────────────
       courses: [...frenchCourses, ...englishCourses],
       previousExams: defaultPreviousExams,
-      books: defaultBooks,
       exams: defaultExams,
       events: defaultEvents,
       // ── Initial UI State ──────────────────────────────────────────────────
       language: "fr",
-      cart: [],
       // ── Language ──────────────────────────────────────────────────────────
       setLanguage: (lang) => set({ language: lang }),
-      // ── Cart ──────────────────────────────────────────────────────────────
-      addToCart: (bookId) =>
-        set((s) => ({
-          cart: s.cart.includes(bookId) ? s.cart : [...s.cart, bookId],
-        })),
-      removeFromCart: (bookId) =>
-        set((s) => ({ cart: s.cart.filter((id) => id !== bookId) })),
-      clearCart: () => set({ cart: [] }),
       // ── Admin CRUD ────────────────────────────────────────────────────────
       addPreviousExam: (exam) =>
         set((s) => ({ previousExams: [...s.previousExams, exam] })),
@@ -93,10 +71,6 @@ export const useAppStore = create<AppState>()(
         set((s) => ({ previousExams: s.previousExams.filter((e) => e.id !== id) })),
       updatePreviousExam: (exam) =>
         set((s) => ({ previousExams: s.previousExams.map((e) => (e.id === exam.id ? exam : e)) })),
-      addBook: (book) =>
-        set((s) => ({ books: [...s.books, book] })),
-      removeBook: (id) =>
-        set((s) => ({ books: s.books.filter((b) => b.id !== id) })),
       addExam: (exam) =>
         set((s) => ({ exams: [...s.exams, exam] })),
       removeExam: (id) =>
@@ -114,7 +88,6 @@ export const useAppStore = create<AppState>()(
       name: "edusphere-v2-store",
       partialize: (state) => ({
         language: state.language,
-        cart: state.cart,
       }),
     }
   )

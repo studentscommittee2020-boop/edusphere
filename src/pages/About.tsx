@@ -68,11 +68,6 @@ export default function About() {
       title: t(language, "Événements Campus", "Campus Events"),
       desc: t(language, "Restez informé des conférences, ateliers et événements culturels.", "Stay informed about conferences, workshops, and cultural events."),
     },
-    {
-      icon: <Info className="w-5 h-5 text-emerald-400" />,
-      title: t(language, "Librairie Académique", "Academic Bookstore"),
-      desc: t(language, "Commandez les manuels recommandés pour chaque cours et filière.", "Order recommended textbooks for each course and major."),
-    },
   ];
 
   return (
@@ -83,7 +78,7 @@ export default function About() {
         initial="initial"
         animate="animate"
         transition={{ duration: 0.4 }}
-        className="relative rounded-2xl overflow-hidden border border-white/[0.08] bg-neutral-900/60 backdrop-blur-sm p-8 md:p-12"
+        className="surface-raised relative overflow-hidden p-8 md:p-12"
       >
         {/* Decorative glow */}
         <div className="absolute -top-20 -right-20 w-72 h-72 bg-red-600/10 rounded-full blur-3xl pointer-events-none" />
@@ -94,14 +89,18 @@ export default function About() {
             <GraduationCap className="w-9 h-9 text-white" />
           </div>
           <div>
-            <h1 className="font-display font-extrabold text-3xl md:text-4xl text-white leading-tight">
+            <span className="eyebrow">
+              <Info className="w-3.5 h-3.5" />
+              {t(language, "À Propos", "About")}
+            </span>
+            <h1 className="mt-2 font-display font-extrabold text-3xl md:text-4xl text-gradient-chrome leading-tight">
               {t(language, "FSEG", "FSEG")}{" "}
               <span className="text-red-500">2</span>{" "}
-              <span className="text-neutral-400 font-medium text-2xl md:text-3xl">
+              <span className="text-muted-foreground font-medium text-2xl md:text-3xl">
                 StudentHub
               </span>
             </h1>
-            <p className="text-neutral-400 mt-2 max-w-xl leading-relaxed">
+            <p className="text-muted-foreground mt-2 max-w-xl leading-relaxed">
               {t(
                 language,
                 "La plateforme académique officielle du comité des étudiants de la Faculté des Sciences Économiques et de Gestion de l'Université Libanaise — campus Achrafieh.",
@@ -118,7 +117,7 @@ export default function About() {
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.1, duration: 0.4 }}
       >
-        <h2 className="font-display font-bold text-lg text-white mb-5">
+        <h2 className="font-display font-bold text-lg text-foreground mb-5">
           {t(language, "Liens Officiels UL", "Official LU Links")}
         </h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
@@ -128,10 +127,10 @@ export default function About() {
               href={link.href}
               target="_blank"
               rel="noopener noreferrer"
-              className={`group relative flex flex-col gap-4 p-6 rounded-2xl border border-white/[0.08] bg-neutral-900/70 backdrop-blur-sm transition-all duration-300 hover:border-white/[0.15] hover:shadow-xl ${link.glow} hover:-translate-y-1`}
+              className={`surface-interactive group relative flex flex-col gap-4 p-6 hover:-translate-y-1 hover:shadow-xl ${link.glow}`}
             >
               {/* Badge */}
-              <span className="absolute top-4 right-4 text-[10px] font-semibold text-neutral-500 bg-white/[0.05] border border-white/[0.08] px-2 py-0.5 rounded-full">
+              <span className="absolute top-4 right-4 text-[10px] font-semibold text-muted-foreground bg-white/[0.05] border border-border px-2 py-0.5 rounded-full">
                 {link.badge}
               </span>
 
@@ -142,16 +141,16 @@ export default function About() {
 
               {/* Text */}
               <div className="flex-1">
-                <h3 className="font-display font-bold text-white text-base leading-snug mb-1.5">
+                <h3 className="font-display font-bold text-foreground text-base leading-snug mb-1.5">
                   {link.title}
                 </h3>
-                <p className="text-sm text-neutral-400 leading-relaxed">
+                <p className="text-sm text-muted-foreground leading-relaxed">
                   {link.description}
                 </p>
               </div>
 
               {/* CTA */}
-              <div className="flex items-center gap-1.5 text-sm font-semibold text-neutral-300 group-hover:text-white transition-colors duration-200">
+              <div className="flex items-center gap-1.5 text-sm font-semibold text-muted-foreground group-hover:text-foreground transition-colors duration-200">
                 {link.label}
                 <ExternalLink className="w-3.5 h-3.5 transition-transform duration-200 group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
               </div>
@@ -166,23 +165,23 @@ export default function About() {
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.2, duration: 0.4 }}
       >
-        <h2 className="font-display font-bold text-lg text-white mb-5">
+        <h2 className="font-display font-bold text-lg text-foreground mb-5">
           {t(language, "Ce que propose EduSphere", "What EduSphere Offers")}
         </h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           {features.map((f, i) => (
             <div
               key={i}
-              className="flex items-start gap-4 p-5 rounded-xl bg-neutral-900/60 border border-white/[0.06] hover:border-white/[0.1] transition-colors duration-200"
+              className="surface flex items-start gap-4 p-5"
             >
               <div className="w-9 h-9 rounded-lg bg-white/[0.05] flex items-center justify-center shrink-0">
                 {f.icon}
               </div>
               <div>
-                <h4 className="font-display font-semibold text-sm text-white mb-1">
+                <h4 className="font-display font-semibold text-sm text-foreground mb-1">
                   {f.title}
                 </h4>
-                <p className="text-xs text-neutral-500 leading-relaxed">{f.desc}</p>
+                <p className="text-xs text-muted-foreground leading-relaxed">{f.desc}</p>
               </div>
             </div>
           ))}
@@ -194,12 +193,12 @@ export default function About() {
         initial={{ opacity: 0, y: 16 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.3, duration: 0.4 }}
-        className="rounded-2xl border border-white/[0.08] bg-neutral-900/60 p-6 space-y-4"
+        className="surface p-6 space-y-4"
       >
-        <h2 className="font-display font-bold text-lg text-white">
+        <h2 className="font-display font-bold text-lg text-foreground">
           {t(language, "À Propos de la Faculté", "About the Faculty")}
         </h2>
-        <p className="text-sm text-neutral-400 leading-relaxed">
+        <p className="text-sm text-muted-foreground leading-relaxed">
           {t(
             language,
             "Le comité des étudiants de la Faculté des Sciences Économiques et de Gestion (FSEG 2) de l'Université Libanaise, campus Achrafieh, propose cette plateforme pour soutenir les étudiants dans leurs cursus de licence en filière française et anglaise.",
@@ -207,20 +206,20 @@ export default function About() {
           )}
         </p>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
-          <a 
-            href="https://maps.app.goo.gl/jbQStf5FZ25uMg9r5" 
-            target="_blank" 
+          <a
+            href="https://maps.app.goo.gl/jbQStf5FZ25uMg9r5"
+            target="_blank"
             rel="noopener noreferrer"
-            className="flex items-center gap-2.5 text-sm text-neutral-400 hover:text-white transition-colors"
+            className="flex items-center gap-2.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
           >
             <MapPin className="w-4 h-4 text-red-400 shrink-0" />
             <span>Ashrafieh, Beirut — Lebanon</span>
           </a>
-          <a 
-            href="https://www.instagram.com/student.council_ulfsegii" 
-            target="_blank" 
+          <a
+            href="https://www.instagram.com/student.council_ulfsegii"
+            target="_blank"
             rel="noopener noreferrer"
-            className="flex items-center gap-2.5 text-sm text-neutral-400 hover:text-white transition-colors"
+            className="flex items-center gap-2.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
           >
             <Smartphone className="w-4 h-4 text-emerald-400 shrink-0" />
             <span>@student.council_ulfsegii</span>
@@ -229,7 +228,7 @@ export default function About() {
       </motion.section>
 
       {/* ── Footer note ── */}
-      <p className="text-center text-xs text-neutral-700 pb-4">
+      <p className="text-center text-xs text-muted-foreground/60 pb-4">
         {t(
           language,
           "EduSphere est l'initiative officielle du comité des étudiants FSEG 2.",

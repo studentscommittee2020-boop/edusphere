@@ -1,11 +1,12 @@
 import { supabase } from "@/lib/supabase";
 import { escapeLike } from "@/lib/utils";
+import type { Major, Semester } from "@/types/database";
 
 // ── Filters ───────────────────────────────────────────────────────────────────
 
 export interface ExamFilters {
-  major?: string;
-  semester?: string;
+  major?: Major | "all";
+  semester?: Semester | "all";
   year?: string;
   examType?: "partiel" | "midterm" | "resit";
   track?: "french" | "english";

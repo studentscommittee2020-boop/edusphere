@@ -10,6 +10,9 @@ import {
 import { supabase } from "@/lib/supabase";
 import type { User, Session } from "@supabase/supabase-js";
 import type { Profile } from "@/types/database";
+import { getDevRole } from "@/lib/devAuth";
+import { setSentryUser } from "@/lib/sentry";
+import { setTelemetryUser } from "@/lib/telemetry";
 
 const IDLE_TIMEOUT_MS = 30 * 60 * 1000; // 30 minutes
 const ADMIN_REFRESH_MS = 5 * 60 * 1000; // re-check admin status every 5 min
@@ -22,6 +25,11 @@ interface AuthContextValue {
   profile: Profile | null;
   isLoading: boolean;
   isAdmin: boolean;
+  /** Super-administrator. Implies isAdmin. Verified server-side via is_owner(). */
+  isOwner: boolean;
+  isDoctor: boolean;
+  isCommitteeAdmin: boolean;
+  isVerifiedStudent: boolean;
   isAuthenticated: boolean;
   signIn: (
     email: string,
@@ -52,6 +60,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [isOwner, setIsOwner] = useState(false);
+  const [isDoctor, setIsDoctor] = useState(false);
+  const [isCommitteeAdmin, setIsCommitteeAdmin] = useState(false);
+  const [isVerifiedStudent, setIsVerifiedStudent] = useState(false);
 
   // ── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -69,31 +81,87 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return !!data;
   }, []);
 
+  // Owner status is never inferred from the local email — it is answered by the
+  // database, which is also what enforces it. The UI flag is only for chrome.
+  const checkOwner = useCallback(async () => {
+    const { data } = await supabase.rpc("is_owner");
+    return !!data;
+  }, []);
+
   const loadSession = useCallback(
     async (sess: Session | null) => {
       if (sess?.user) {
-        const [prof, adminFlag] = await Promise.all([
+        const [prof, adminFlag, ownerFlag] = await Promise.all([
           fetchProfile(sess.user.id),
           checkAdmin(),
+          checkOwner(),
         ]);
         setUser(sess.user);
         setSession(sess);
         setProfile(prof);
-        setIsAdmin(adminFlag);
+        setIsAdmin(adminFlag || ownerFlag);
+        setIsOwner(ownerFlag);
+
+        // Identify the user to observability once, here, rather than at every
+        // call site — this is the only place the session is authoritative.
+        setSentryUser({
+          id: sess.user.id,
+          email: sess.user.email,
+          role: ownerFlag ? "owner" : adminFlag ? "admin" : prof?.role ?? "student",
+        });
+        setTelemetryUser(sess.user.id);
+        setIsDoctor(prof?.role === "doctor");
+        setIsCommitteeAdmin(prof?.role === "committee_admin");
+        setIsVerifiedStudent(
+          adminFlag ||
+            ownerFlag ||
+            prof?.role === "doctor" ||
+            prof?.role === "committee_admin" ||
+            sess.user.app_metadata?.student_verified === true,
+        );
       } else {
         setUser(null);
         setSession(null);
         setProfile(null);
+        setSentryUser(null);
+        setTelemetryUser(null);
         setIsAdmin(false);
+        setIsOwner(false);
+        setIsDoctor(false);
+        setIsCommitteeAdmin(false);
+        setIsVerifiedStudent(false);
       }
       setIsLoading(false);
     },
-    [fetchProfile, checkAdmin]
+    [fetchProfile, checkAdmin, checkOwner]
   );
+
+  // ── Dev-only role preview ───────────────────────────────────────────────
+  // Short-circuits the real session so role-gated UI can be inspected without
+  // credentials or applied migrations. `import.meta.env.DEV` is a build-time
+  // constant, so this whole branch is removed from a production bundle — see
+  // src/lib/devAuth.ts. It fakes only the client's view of who you are; every
+  // Supabase query still runs unauthenticated and RLS still governs all data.
+  const devAccount = import.meta.env.DEV ? getDevRole() : null;
+
+  useEffect(() => {
+    if (!devAccount) return;
+    setProfile(devAccount.profile);
+    setIsAdmin(devAccount.isAdmin);
+    setIsOwner(devAccount.isOwner);
+    setIsDoctor(devAccount.isDoctor);
+    setIsCommitteeAdmin(devAccount.isCommitteeAdmin);
+    setIsVerifiedStudent(devAccount.isVerifiedStudent);
+    setIsLoading(false);
+  }, [devAccount]);
 
   // ── Boot: get existing session ───────────────────────────────────────────────
 
   useEffect(() => {
+    // A dev role preview owns the auth state; letting the real "no session"
+    // path run would immediately clear the faked flags back to guest.
+    if (devAccount) return;
+
     supabase.auth.getSession().then(({ data: { session: sess } }) => {
       loadSession(sess);
     });
@@ -105,7 +173,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
 
     return () => subscription.unsubscribe();
-  }, [loadSession]);
+  }, [loadSession, devAccount]);
 
   // ── Idle timeout: auto-logout after 30 min inactivity ───────────────────────
 
@@ -136,11 +204,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!user) return;
     const interval = setInterval(async () => {
-      const fresh = await checkAdmin();
-      setIsAdmin(fresh);
+      const [freshAdmin, freshOwner] = await Promise.all([checkAdmin(), checkOwner()]);
+      setIsAdmin(freshAdmin || freshOwner);
+      setIsOwner(freshOwner);
+      setIsVerifiedStudent((current) => current || freshAdmin || freshOwner);
     }, ADMIN_REFRESH_MS);
     return () => clearInterval(interval);
-  }, [user, checkAdmin]);
+  }, [user, checkAdmin, checkOwner]);
 
   // ── Actions ──────────────────────────────────────────────────────────────────
 
@@ -209,7 +279,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     profile,
     isLoading,
     isAdmin,
-    isAuthenticated: !!user,
+    isOwner,
+    isDoctor,
+    isCommitteeAdmin,
+    isVerifiedStudent,
+    isAuthenticated: !!user || !!devAccount,
     signIn,
     signUp,
     signOut,

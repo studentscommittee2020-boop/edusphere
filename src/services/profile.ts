@@ -1,5 +1,5 @@
 import { supabase } from "@/lib/supabase";
-import type { Profile } from "@/types/database";
+import type { Profile, Major } from "@/types/database";
 
 // ── Profile Fetch ─────────────────────────────────────────────────────────────
 
@@ -63,12 +63,15 @@ export async function uploadAvatar(userId: string, file: File) {
 
 // ── Dashboard Stats ───────────────────────────────────────────────────────────
 
+// Must stay in sync with public.get_dashboard_stats() in
+// supabase/migrations/010_remove_bookstore.sql — if that RPC's return
+// columns ever change, update this interface in the same commit.
 export interface DashboardStats {
   total_exams: number;
   total_entrance_exams: number;
-  total_books: number;
   total_events: number;
   total_courses: number;
+  total_materials: number;
 }
 
 export async function getDashboardStats() {
@@ -76,13 +79,16 @@ export async function getDashboardStats() {
   return { data: data as DashboardStats | null, error };
 }
 
+// Must stay in sync with public.get_user_dashboard_stats(p_major, p_semester)
+// in supabase/migrations/010_remove_bookstore.sql — if that RPC's return
+// columns ever change, update this interface in the same commit.
 export interface UserDashboardStats {
   exams_for_major: number;
-  exams_for_semester: number | null;
-  books_for_major: number;
+  exams_for_semester: number;
   upcoming_events: number;
   user_favorites: number;
-  user_orders: number;
+  enrolled_courses: number;
+  pending_assignments: number;
 }
 
 export async function getUserDashboardStats(
@@ -114,7 +120,7 @@ export async function getRecommendedExams(
 // ── Recently Added Exams (for dashboard) ─────────────────────────────────────
 
 export async function getRecentExams(
-  major?: string | null,
+  major?: Major | "all" | null,
   limit = 4
 ) {
   let query = supabase

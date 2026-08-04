@@ -1,0 +1,523 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>EduSphere — Platform Overview</title>
+<style>
+  :root{
+    --ink:#1c1f26;
+    --ink-soft:#4b505c;
+    --ink-faint:#767c8a;
+    --rule:#e1e3e8;
+    --rule-soft:#edeef2;
+    --paper:#ffffff;
+    --paper-tint:#faf9f8;
+    --brand:#8a1c34;
+    --brand-deep:#5e1223;
+    --brand-tint:#f8ecef;
+    --brand-tint-strong:#f3dde2;
+    --green:#1f6f4f;
+    --green-tint:#eaf4ef;
+    --amber:#8a5a10;
+    --amber-tint:#faf1e2;
+  }
+
+  *{ box-sizing:border-box; }
+
+  html{ font-size:11pt; }
+
+  body{
+    margin:0;
+    font-family:"Segoe UI","Calibri","Arial",sans-serif;
+    color:var(--ink);
+    line-height:1.55;
+    background:var(--paper);
+    -webkit-font-smoothing:antialiased;
+  }
+
+  @page{
+    size:A4;
+    margin:16mm 16mm 18mm 16mm;
+  }
+
+  h1,h2,h3{
+    font-family:"Georgia","Cambria","Times New Roman",serif;
+    color:var(--ink);
+    font-weight:700;
+    margin:0 0 0.4em 0;
+  }
+
+  p{ margin:0 0 0.85em 0; }
+  ul,ol{ margin:0 0 0.85em 0; padding-left:1.3em; }
+  li{ margin-bottom:0.4em; }
+  li:last-child{ margin-bottom:0; }
+  strong{ color:var(--ink); }
+
+  /* ── Masthead ─────────────────────────────────────────────────────── */
+  .masthead{
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-end;
+    padding-bottom:14px;
+    border-bottom:3px solid var(--brand);
+    margin-bottom:6px;
+  }
+  .masthead .brand{
+    font-family:"Georgia",serif;
+    font-weight:700;
+    font-size:26pt;
+    letter-spacing:-0.01em;
+    color:var(--ink);
+  }
+  .masthead .brand span{ color:var(--brand); }
+  .masthead .doc-type{
+    text-align:right;
+    font-size:9.5pt;
+    color:var(--ink-soft);
+    text-transform:uppercase;
+    letter-spacing:0.08em;
+    line-height:1.6;
+  }
+  .subtitle{
+    margin-top:10px;
+    font-size:13pt;
+    color:var(--ink-soft);
+    font-family:"Georgia",serif;
+    font-style:italic;
+  }
+  .doc-status{
+    margin-top:10px;
+    font-size:9pt;
+    color:var(--ink-faint);
+    border-top:1px solid var(--rule-soft);
+    padding-top:8px;
+  }
+
+  /* ── Highlight strip ──────────────────────────────────────────────── */
+  .highlights{
+    display:grid;
+    grid-template-columns:repeat(4,1fr);
+    gap:10px;
+    margin:18px 0 28px 0;
+    break-inside:avoid;
+  }
+  .highlight{
+    background:var(--paper-tint);
+    border:1px solid var(--rule);
+    border-top:3px solid var(--brand);
+    border-radius:3px;
+    padding:10px 11px;
+    font-size:9pt;
+    color:var(--ink-soft);
+    font-weight:600;
+    text-align:center;
+    line-height:1.35;
+  }
+
+  /* ── Section chrome ───────────────────────────────────────────────── */
+  section{ margin-bottom:26px; }
+  section.page-start{ break-before:page; }
+
+  .section-head{
+    display:flex;
+    align-items:baseline;
+    gap:12px;
+    margin-bottom:14px;
+    break-after:avoid;
+  }
+  .section-num{
+    font-family:"Georgia",serif;
+    font-weight:700;
+    font-size:11pt;
+    color:var(--brand);
+    border:1.4px solid var(--brand);
+    border-radius:50%;
+    width:26px;
+    height:26px;
+    min-width:26px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+  }
+  .section-head h2{
+    font-size:17pt;
+    margin:0;
+  }
+  .section-intro{
+    font-size:11.5pt;
+    color:var(--ink-soft);
+    margin-bottom:14px;
+  }
+
+  h3{ font-size:12.5pt; margin-top:1.1em; }
+
+  /* ── Role cards (Section 2) ───────────────────────────────────────── */
+  .role-grid{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:12px;
+  }
+  .role-card{
+    background:var(--paper-tint);
+    border:1px solid var(--rule);
+    border-left:4px solid var(--brand);
+    border-radius:3px;
+    padding:13px 15px;
+    break-inside:avoid;
+  }
+  .role-card h3{
+    margin:0 0 8px 0;
+    font-size:12pt;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+  }
+  .role-card .role-tag{
+    font-family:"Segoe UI",sans-serif;
+    font-size:7.5pt;
+    font-weight:700;
+    text-transform:uppercase;
+    letter-spacing:0.06em;
+    color:var(--brand);
+    background:var(--brand-tint);
+    border-radius:10px;
+    padding:2.5px 8px;
+  }
+  .role-card ul{ margin-bottom:0; padding-left:1.15em; }
+  .role-card li{ font-size:10pt; color:var(--ink-soft); margin-bottom:5px; }
+
+  /* ── Centerpiece callout (Section 3) ──────────────────────────────── */
+  .centerpiece{
+    background:var(--brand-tint);
+    border:1.5px solid var(--brand-tint-strong);
+    border-radius:5px;
+    padding:20px 22px;
+    margin:6px 0 18px 0;
+    break-inside:avoid;
+  }
+  .centerpiece .kicker{
+    font-size:8.5pt;
+    font-weight:700;
+    text-transform:uppercase;
+    letter-spacing:0.1em;
+    color:var(--brand);
+    margin-bottom:6px;
+  }
+  .centerpiece p.claim{
+    font-family:"Georgia",serif;
+    font-size:13.5pt;
+    line-height:1.5;
+    color:var(--brand-deep);
+    font-weight:600;
+    margin-bottom:0;
+  }
+  .proof-box{
+    background:var(--paper);
+    border:1px solid var(--rule);
+    border-radius:4px;
+    padding:13px 16px;
+    margin-top:16px;
+    break-inside:avoid;
+  }
+  .proof-box .label{
+    font-size:8.5pt;
+    font-weight:700;
+    text-transform:uppercase;
+    letter-spacing:0.08em;
+    color:var(--green);
+    margin-bottom:5px;
+  }
+  .proof-box p{ font-size:10.3pt; color:var(--ink-soft); margin-bottom:0; }
+
+  /* ── Disclosure section (Section 4) ───────────────────────────────── */
+  .disclosure-box{
+    background:var(--amber-tint);
+    border:1px solid #ecd9b3;
+    border-left:4px solid var(--amber);
+    border-radius:3px;
+    padding:12px 15px;
+    margin-bottom:14px;
+    break-inside:avoid;
+  }
+  .disclosure-box .label{
+    font-size:8.5pt;
+    font-weight:700;
+    text-transform:uppercase;
+    letter-spacing:0.08em;
+    color:var(--amber);
+    margin-bottom:4px;
+  }
+  .disclosure-box p{ font-size:10.3pt; color:var(--ink-soft); margin-bottom:0; }
+
+  .collect-item{ margin-bottom:14px; break-inside:avoid; }
+  .collect-item h3{
+    font-size:11.5pt;
+    margin-bottom:4px;
+    color:var(--ink);
+  }
+  .collect-item p{ font-size:10.3pt; color:var(--ink-soft); }
+
+  /* ── Security list (Section 5) ────────────────────────────────────── */
+  .security-list{ list-style:none; padding-left:0; margin:0; }
+  .security-list li{
+    padding:11px 0 11px 30px;
+    border-bottom:1px solid var(--rule-soft);
+    position:relative;
+    break-inside:avoid;
+    font-size:10.3pt;
+    color:var(--ink-soft);
+  }
+  .security-list li:last-child{ border-bottom:none; }
+  .security-list li::before{
+    content:"";
+    position:absolute;
+    left:2px;
+    top:15px;
+    width:9px;
+    height:9px;
+    border-radius:50%;
+    background:var(--brand);
+  }
+  .security-list strong{ color:var(--ink); }
+
+  /* ── Governance table (Section 7) ─────────────────────────────────── */
+  table.gov{
+    width:100%;
+    border-collapse:collapse;
+    margin-top:6px;
+    font-size:10pt;
+  }
+  table.gov th{
+    text-align:left;
+    font-family:"Georgia",serif;
+    font-size:9.5pt;
+    color:var(--paper);
+    background:var(--brand);
+    padding:8px 12px;
+  }
+  table.gov td{
+    padding:9px 12px;
+    border-bottom:1px solid var(--rule-soft);
+    color:var(--ink-soft);
+    vertical-align:top;
+  }
+  table.gov tr:nth-child(even) td{ background:var(--paper-tint); }
+  table.gov td.role-name{ color:var(--ink); font-weight:600; white-space:nowrap; }
+
+  /* ── Reliability note ──────────────────────────────────────────────── */
+  .note-box{
+    background:var(--green-tint);
+    border:1px solid #cfe6da;
+    border-left:4px solid var(--green);
+    border-radius:3px;
+    padding:12px 15px;
+    margin-top:12px;
+    break-inside:avoid;
+  }
+  .note-box p{ font-size:10.3pt; color:var(--ink-soft); margin-bottom:0; }
+
+  /* ── Closing ───────────────────────────────────────────────────────── */
+  .closing{
+    margin-top:30px;
+    padding-top:14px;
+    border-top:1px solid var(--rule);
+    text-align:center;
+    font-size:8.5pt;
+    color:var(--ink-faint);
+  }
+
+  .lead{ font-size:11.5pt; color:var(--ink-soft); }
+</style>
+</head>
+<body>
+
+  <header class="masthead">
+    <div class="brand">Edu<span>Sphere</span></div>
+    <div class="doc-type">Platform Overview<br/>Prepared for Faculty Administration</div>
+  </header>
+  <p class="subtitle">A verified academic portal for the Faculty of Economics and Business Administration (FSEG)</p>
+  <p class="doc-status">Document status — Version 1.0, 4 August 2026. This document describes the EduSphere platform as specified, for administration review and approval.</p>
+
+  <div class="highlights">
+    <div class="highlight">Verified sign-in against university records</div>
+    <div class="highlight">Access enforced by the database, not just the screen</div>
+    <div class="highlight">Student file numbers are never stored</div>
+    <div class="highlight">Append-only trail of every privileged action</div>
+  </div>
+
+  <!-- ═══════════════════════════ 1. WHAT EDUSPHERE IS ═══════════════════════════ -->
+  <section id="what-it-is">
+    <div class="section-head">
+      <span class="section-num">1</span>
+      <h2>What EduSphere Is</h2>
+    </div>
+    <p class="lead">EduSphere is an academic portal built for the students, faculty, and Student Council of FSEG. It replaces the informal, ad-hoc channels — messaging-app groups, shared drives of uncertain origin, photocopied stacks at the print shop — that a large faculty otherwise falls back on, with a single verified system that everyone uses the same way.</p>
+    <p>For students, the day-to-day problem EduSphere solves is simple: knowing where to find the right thing, and trusting that it is genuine. A past exam pulled from a messaging group might be the wrong year, the wrong track, or missing pages, with no way to tell until it is too late to matter. A printed timetable goes stale the moment a room or an instructor changes. EduSphere addresses this with one maintained exam archive, one schedule generated from the university's own records rather than retyped by hand, and one place to receive course material and assignments — all restricted to verified FSEG students, and all correctable when something is wrong.</p>
+    <p>For faculty and the Student Council, EduSphere is the operational backbone behind that experience: a place to publish material and assignments to the right students automatically, to send documents for printing or for the archive without chasing anyone down, and to run the print desk and the events calendar without a separate system. For Administration, it is a single, auditable point of oversight over all of the above.</p>
+    <p>The rest of this document covers what each group can do (Section 2), the platform's most important protection for student data (Section 3), what the platform collects and why (Section 4), the security model that enforces all of it (Section 5), its reliability approach (Section 6), and how access is governed end to end (Section 7).</p>
+  </section>
+
+  <!-- ═══════════════════════════ 2. FEATURES BY ROLE ═══════════════════════════ -->
+  <section id="features">
+    <div class="section-head">
+      <span class="section-num">2</span>
+      <h2>Features by Role</h2>
+    </div>
+    <p class="section-intro">EduSphere gives each of its four constituencies a distinct set of tools, scoped to what that role actually needs.</p>
+
+    <div class="role-grid">
+      <div class="role-card">
+        <h3>Students <span class="role-tag">Verified</span></h3>
+        <ul>
+          <li>Sign in with a university email and student file number, verified directly against the university's own records before any access is granted.</li>
+          <li>Browse and download the exam archive — past papers organised by major, semester, subject, and teaching track — and flag a problem or rate a paper's quality to help keep it accurate.</li>
+          <li>View a personal weekly timetable and course list, generated from the university's own enrolment and scheduling records rather than entered by hand.</li>
+          <li>Open course materials and resources instructors publish, automatically scoped to the courses the student is actually enrolled in.</li>
+          <li>Receive, complete, and submit assignments online, and see instructor feedback and grades once reviewed.</li>
+        </ul>
+      </div>
+
+      <div class="role-card">
+        <h3>Doctors / Faculty <span class="role-tag">Teaching staff</span></h3>
+        <ul>
+          <li>Publish course materials — notes, slides, readings, correction sheets — directly to the students enrolled in a given course, and update or remove them at any time.</li>
+          <li>Create and publish assignments targeted to a major, semester, and teaching track, with a deadline and an optional late-work allowance.</li>
+          <li>Review each student's submission and return a grade with written feedback.</li>
+          <li>Send documents — including past exam papers — to the Student Council through a private channel, for printing or for consideration for the archive.</li>
+        </ul>
+      </div>
+
+      <div class="role-card">
+        <h3>Student Council <span class="role-tag">Committee</span></h3>
+        <ul>
+          <li>Curate the exam archive: add, correct, and retire past exam papers, and act on the problem reports and quality ratings students submit.</li>
+          <li>Review the documents faculty send in and run the print desk day to day — tracking each request from submission through to completion, in a private queue students never see.</li>
+          <li>Manage the public events calendar: talks, workshops, and other faculty activities.</li>
+        </ul>
+      </div>
+
+      <div class="role-card">
+        <h3>Administration <span class="role-tag">Oversight</span></h3>
+        <ul>
+          <li>An oversight console summarising platform-wide activity: accounts, roles, and usage at a glance.</li>
+          <li>Full visibility into the platform's permanent audit trail of privileged actions (Section 5).</li>
+          <li>Authority to assign and correct account roles as staff and council membership change.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════ 3. DATA PROTECTION ═══════════════════════════ -->
+  <section id="data-protection" class="page-start">
+    <div class="section-head">
+      <span class="section-num">3</span>
+      <h2>Data Protection</h2>
+    </div>
+    <p class="section-intro">This is the single most important guarantee EduSphere makes to every student who signs in.</p>
+
+    <div class="centerpiece">
+      <div class="kicker">The core guarantee</div>
+      <p class="claim">A student's university file number is never stored. It is used in memory, once, to confirm enrolment with the university — then discarded. It is never written to the database, never logged, and never transmitted to any third-party service. The university's raw responses are treated the same way: only the derived timetable and course enrolment that come out of that exchange are ever kept.</p>
+
+      <div class="proof-box">
+        <div class="label">Why this matters</div>
+        <p>A file number is a permanent piece of identification. If EduSphere stored it, that single value would become a standing liability — one more place a student's identity could be exposed if this platform, or anything it depends on, were ever compromised. By design, there is nothing to lose, because nothing is kept.</p>
+      </div>
+
+      <div class="proof-box">
+        <div class="label">How this is enforced, not just promised</div>
+        <p>Every time a student wants to refresh their schedule or enrolment, EduSphere asks for the file number again. That repetition is not an oversight — it is the proof. If the platform stored the number, or any substitute for it, a refresh would never need to ask twice. The fact that it does, every time, means there is no stored credential anywhere in the system for anyone — including EduSphere's own operators — to replay, export, or leak.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════ 4. HONEST DISCLOSURE ═══════════════════════════ -->
+  <section id="disclosure">
+    <div class="section-head">
+      <span class="section-num">4</span>
+      <h2>What the Platform Does Collect</h2>
+    </div>
+    <p class="section-intro">In the interest of the same transparency, this section states plainly what EduSphere does collect. It is a deliberate product decision, not an omission — and it is stated in full on the platform's own public Privacy page, which this document is consistent with.</p>
+
+    <div class="disclosure-box">
+      <div class="label">Stated plainly</div>
+      <p>EduSphere collects usage analytics and sets cookies from the moment the site loads, whether or not a visitor is signed in, and does so without a cookie-consent banner. A visitor who wants to avoid this can block cookies or use private browsing.</p>
+    </div>
+
+    <div class="collect-item">
+      <h3>Usage analytics</h3>
+      <p>EduSphere records the pages a visitor views, which resources and exams are opened, and general environment details — browser, language, timezone, and screen size. Two first-party cookies support this: one anonymous identifier kept for a year, and one session identifier kept for thirty minutes of inactivity, alongside the sign-in cookies required for the site to function at all.</p>
+    </div>
+
+    <div class="collect-item">
+      <h3>Session recording, for error diagnosis</h3>
+      <p>EduSphere uses Sentry, a third-party error-monitoring service, including its Session Replay feature, which can reconstruct on-screen activity — pages, clicks, scrolling, and typed text — to help diagnose problems after the fact. Password fields and one-time sign-in codes are explicitly excluded from this capture and are never recorded, whatever else is.</p>
+    </div>
+
+    <div class="collect-item">
+      <h3>Who can see it</h3>
+      <p>This telemetry is readable only by the system owner — not by ordinary administrators, and never by other students. That restriction is enforced by the database itself, the same way every other access restriction on this platform is (Section 5), not only by the application's interface.</p>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════ 5. SECURITY MEASURES ═══════════════════════════ -->
+  <section id="security" class="page-start">
+    <div class="section-head">
+      <span class="section-num">5</span>
+      <h2>Security Measures</h2>
+    </div>
+    <p class="section-intro">EduSphere's security model is built to hold even if a single screen or a single line of interface code has a mistake in it.</p>
+
+    <ul class="security-list">
+      <li><strong>Role-based access control.</strong> Every account has exactly one role — student, faculty, Student Council, or administration — and the platform only ever shows the tools and data that role is entitled to.</li>
+      <li><strong>Enforced at the database, not just the interface.</strong> EduSphere's access rules are checked inside the database itself, on every single read and write, regardless of which part of the application is asking. In practice, this means the database independently refuses any request for data a user is not entitled to see. A mistake in one screen cannot expose another student's records, because the database was never going to hand them over in the first place.</li>
+      <li><strong>Verified-student-only access.</strong> A student account only gains access to student features after EduSphere confirms, directly with the university, that the person is a real, currently enrolled student (Section 3).</li>
+      <li><strong>Private file storage with short-lived links.</strong> Every exam paper, course material, assignment, and submission is stored privately — nothing is reachable by a plain, guessable, or permanent web address. Each time a file is opened, the platform issues a fresh, single-purpose link that expires within about a minute: long enough to start the download, useless if copied or shared afterward.</li>
+      <li><strong>Protection against bulk downloading.</strong> Opening an individual exam paper is normal study behaviour; systematically working through the entire archive is not. EduSphere limits how many archive files a student can download per hour and per day, and separately detects rapid, wide-ranging download bursts characteristic of automated scraping — protecting the archive as a shared resource without getting in the way of ordinary studying.</li>
+      <li><strong>An audit trail even the system owner cannot alter.</strong> Every privileged action — a role change, a reviewed document, an edited record, a system-level change — is written to a permanent activity log the moment it happens. That log is append-only by design: even the platform's own system owner, who otherwise has unrestricted administrative reach, has no ability to edit or delete an entry once it is written. Accountability does not depend on trusting that no one looked the other way — it is a structural property of the system.</li>
+      <li><strong>Encrypted transport.</strong> Every connection into and out of EduSphere — between a user's browser and the platform, between the platform and its database, and between the platform and the university's own verification service — runs over encrypted HTTPS.</li>
+    </ul>
+  </section>
+
+  <!-- ═══════════════════════════ 6. RELIABILITY ═══════════════════════════ -->
+  <section id="reliability">
+    <div class="section-head">
+      <span class="section-num">6</span>
+      <h2>Reliability</h2>
+    </div>
+    <p>EduSphere's day-to-day reliability rests on managed hosting: the application is delivered through a global content-delivery network, and its live database runs on a managed platform that includes automated backups as a standard part of the service. This is the foundation the platform runs on today, for every student.</p>
+
+    <div class="note-box">
+      <p>A further high-availability capability — a secondary system that would let already-signed-in users keep reading cached content during a brief outage of the main service — is in active architectural design. It has not been built or tested, and it is not part of what EduSphere delivers today. Administration will receive a specific readiness review before any such capability is presented as complete.</p>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════ 7. GOVERNANCE ═══════════════════════════ -->
+  <section id="governance">
+    <div class="section-head">
+      <span class="section-num">7</span>
+      <h2>Governance</h2>
+    </div>
+    <p class="section-intro">Every account on EduSphere carries exactly one role, and every role's reach is defined narrowly and enforced at the database level (Section 5):</p>
+
+    <table class="gov">
+      <thead>
+        <tr><th>Role</th><th>What they can see and do</th></tr>
+      </thead>
+      <tbody>
+        <tr><td class="role-name">Students</td><td>Their own records and the shared archive and resources they are entitled to — never another student's data.</td></tr>
+        <tr><td class="role-name">Faculty</td><td>Only the courses, materials, assignments, and submissions that belong to them.</td></tr>
+        <tr><td class="role-name">Student Council</td><td>What is needed to run the archive, the events calendar, and the print desk.</td></tr>
+        <tr><td class="role-name">Administration</td><td>The broadest reach, for oversight — and, per Section 5, even that reach leaves a permanent, unalterable record of what was done and by whom.</td></tr>
+      </tbody>
+    </table>
+
+    <p style="margin-top:16px;">This same principle is stated three times in three ways across this document because it is the one that matters most to an approving body: nobody's access on EduSphere is a matter of trust or convention. It is a structural property of the system, checked by the database on every request.</p>
+  </section>
+
+  <div class="closing">
+    EduSphere — Platform Overview · Version 1.0 · 4 August 2026 · Prepared for FSEG administration review
+  </div>
+
+</body>
+</html>

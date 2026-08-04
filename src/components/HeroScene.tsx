@@ -1,178 +1,211 @@
-// @ts-nocheck — R3F JSX intrinsic types incompatible with some Three.js versions
-import { Canvas, useFrame } from "@react-three/fiber";
-import { useRef, Suspense, useMemo, Component, type ReactNode } from "react";
-import * as THREE from "three";
+// @ts-nocheck — R3F JSX intrinsic types are incompatible with some Three.js versions
+import { Canvas, useFrame, useThree } from "@react-three/fiber";
+import { useRef, useMemo, useEffect, useState, Suspense, Component, type ReactNode } from "react";
+import { BufferGeometry, BufferAttribute, AdditiveBlending } from "three";
+import type { Mesh, Points } from "three";
 
-/* ── Error boundary so WebGL failures don't crash the app ────────────── */
-class SceneErrorBoundary extends Component<
-  { children: ReactNode },
-  { hasError: boolean }
-> {
+/**
+ * Ambient background scene.
+ *
+ * This sits behind every page, so it must read as atmosphere, never as content.
+ * The previous version used opaque metallic geometry at full opacity, which
+ * punched through the cards in front of it and looked like rendering artifacts.
+ * The rules now:
+ *
+ *   · Everything is transparent and additively blended — shapes tint the
+ *     background rather than occluding it.
+ *   · Geometry lives far back (z ≤ −6) and well outside the central column
+ *     where text sits.
+ *   · The canvas is masked to a radial vignette so the middle of the screen,
+ *     where content is, stays clean.
+ *   · Rendering stops when the tab is hidden, and the whole scene is skipped
+ *     under prefers-reduced-motion.
+ */
+
+class SceneErrorBoundary extends Component<{ children: ReactNode }, { hasError: boolean }> {
   state = { hasError: false };
   static getDerivedStateFromError() {
     return { hasError: true };
   }
   render() {
-    if (this.state.hasError) return null;
-    return this.props.children;
+    return this.state.hasError ? null : this.props.children;
   }
 }
 
-/* ── 3D elements ─────────────────────────────────────────────────────── */
+// ── Elements ─────────────────────────────────────────────────────────────────
 
-function GlowSphere({
-  position,
-  color,
-  speed = 1,
-  scale = 1,
-}: {
-  position: [number, number, number];
-  color: string;
-  speed?: number;
-  scale?: number;
-}) {
-  const meshRef = useRef<THREE.Mesh>(null);
+function SoftOrb({ position, color, speed = 1, scale = 1, opacity = 0.22 }) {
+  const meshRef = useRef<Mesh>(null);
 
   useFrame((state) => {
-    if (meshRef.current) {
-      meshRef.current.rotation.x = state.clock.elapsedTime * 0.15 * speed;
-      meshRef.current.rotation.y = state.clock.elapsedTime * 0.2 * speed;
-      meshRef.current.position.y =
-        position[1] + Math.sin(state.clock.elapsedTime * 0.5 * speed) * 0.5;
-    }
+    const mesh = meshRef.current;
+    if (!mesh) return;
+    const t = state.clock.elapsedTime;
+    mesh.rotation.x = t * 0.06 * speed;
+    mesh.rotation.y = t * 0.09 * speed;
+    mesh.position.y = position[1] + Math.sin(t * 0.25 * speed) * 0.45;
   });
 
   return (
     <mesh ref={meshRef} position={position} scale={scale}>
-      <icosahedronGeometry args={[1, 4]} />
-      <meshStandardMaterial
+      <icosahedronGeometry args={[1, 3]} />
+      <meshBasicMaterial
         color={color}
-        roughness={0.15}
-        metalness={0.9}
-        emissive={color}
-        emissiveIntensity={0.15}
+        transparent
+        opacity={opacity}
+        blending={AdditiveBlending}
+        depthWrite={false}
+        wireframe
       />
     </mesh>
   );
 }
 
-function FloatingRing({
-  position,
-  color,
-  scale = 1,
-}: {
-  position: [number, number, number];
-  color: string;
-  scale?: number;
-}) {
-  const meshRef = useRef<THREE.Mesh>(null);
+function SoftRing({ position, color, scale = 1, opacity = 0.18 }) {
+  const meshRef = useRef<Mesh>(null);
 
   useFrame((state) => {
-    if (meshRef.current) {
-      meshRef.current.rotation.x = state.clock.elapsedTime * 0.4;
-      meshRef.current.rotation.z = state.clock.elapsedTime * 0.25;
-      meshRef.current.position.y =
-        position[1] + Math.sin(state.clock.elapsedTime * 0.3) * 0.3;
-    }
+    const mesh = meshRef.current;
+    if (!mesh) return;
+    const t = state.clock.elapsedTime;
+    mesh.rotation.x = t * 0.14;
+    mesh.rotation.z = t * 0.09;
+    mesh.position.y = position[1] + Math.sin(t * 0.18) * 0.3;
   });
 
   return (
     <mesh ref={meshRef} position={position} scale={scale}>
-      <torusGeometry args={[1, 0.25, 24, 64]} />
-      <meshStandardMaterial
+      <torusGeometry args={[1, 0.06, 12, 64]} />
+      <meshBasicMaterial
         color={color}
-        roughness={0.2}
-        metalness={0.85}
-        emissive={color}
-        emissiveIntensity={0.1}
+        transparent
+        opacity={opacity}
+        blending={AdditiveBlending}
+        depthWrite={false}
       />
     </mesh>
   );
 }
 
 function Particles() {
-  const points = useRef<THREE.Points>(null);
-  const count = 300;
+  const points = useRef<Points>(null);
+  const count = 260;
 
   const geometry = useMemo(() => {
-    const geo = new THREE.BufferGeometry();
+    const geo = new BufferGeometry();
     const positions = new Float32Array(count * 3);
     const colors = new Float32Array(count * 3);
 
     for (let i = 0; i < count; i++) {
-      positions[i * 3] = (Math.random() - 0.5) * 25;
-      positions[i * 3 + 1] = (Math.random() - 0.5) * 25;
-      positions[i * 3 + 2] = (Math.random() - 0.5) * 15;
+      positions[i * 3] = (Math.random() - 0.5) * 28;
+      positions[i * 3 + 1] = (Math.random() - 0.5) * 28;
+      // Keep the field behind the content plane.
+      positions[i * 3 + 2] = -4 - Math.random() * 12;
 
-      if (Math.random() > 0.5) {
-        colors[i * 3] = 0.9;
-        colors[i * 3 + 1] = 0.2;
-        colors[i * 3 + 2] = 0.2;
-      } else {
-        colors[i * 3] = 0.2;
-        colors[i * 3 + 1] = 0.7;
-        colors[i * 3 + 2] = 0.4;
-      }
+      const warm = Math.random() > 0.45;
+      colors[i * 3] = warm ? 0.86 : 0.22;
+      colors[i * 3 + 1] = warm ? 0.22 : 0.68;
+      colors[i * 3 + 2] = warm ? 0.24 : 0.42;
     }
 
-    geo.setAttribute("position", new THREE.BufferAttribute(positions, 3));
-    geo.setAttribute("color", new THREE.BufferAttribute(colors, 3));
+    geo.setAttribute("position", new BufferAttribute(positions, 3));
+    geo.setAttribute("color", new BufferAttribute(colors, 3));
     return geo;
   }, []);
 
+  // BufferGeometry holds GPU buffers; React will not release them for us.
+  useEffect(() => () => geometry.dispose(), [geometry]);
+
   useFrame((state) => {
-    if (points.current) {
-      points.current.rotation.y = state.clock.elapsedTime * 0.015;
-      points.current.rotation.x =
-        Math.sin(state.clock.elapsedTime * 0.01) * 0.1;
-    }
+    const node = points.current;
+    if (!node) return;
+    node.rotation.y = state.clock.elapsedTime * 0.012;
+    node.rotation.x = Math.sin(state.clock.elapsedTime * 0.008) * 0.08;
   });
 
   return (
     <points ref={points} geometry={geometry}>
       <pointsMaterial
-        size={0.04}
+        size={0.035}
         vertexColors
         transparent
-        opacity={0.5}
+        opacity={0.42}
         sizeAttenuation
+        depthWrite={false}
+        blending={AdditiveBlending}
       />
     </points>
   );
 }
 
-/* ── Scene ────────────────────────────────────────────────────────────── */
+/** Suspends the render loop while the tab is hidden. */
+function RenderGate() {
+  const { invalidate, setFrameloop } = useThree();
 
-function Scene() {
-  return (
-    <Canvas
-      camera={{ position: [0, 0, 9], fov: 40 }}
-      gl={{ alpha: true, antialias: true, powerPreference: "high-performance" }}
-      style={{ background: "transparent" }}
-    >
-      <Suspense fallback={null}>
-        <ambientLight intensity={0.3} />
-        <directionalLight position={[10, 10, 5]} intensity={0.8} />
-        <pointLight position={[-5, 5, 5]} color="#ef4444" intensity={3} distance={15} />
-        <pointLight position={[5, -3, 3]} color="#22c55e" intensity={2.5} distance={12} />
-        <pointLight position={[0, 3, 6]} color="#ffffff" intensity={0.5} distance={10} />
+  useEffect(() => {
+    const onVisibility = () => {
+      if (document.visibilityState === "hidden") {
+        setFrameloop("never");
+      } else {
+        setFrameloop("always");
+        invalidate();
+      }
+    };
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => document.removeEventListener("visibilitychange", onVisibility);
+  }, [invalidate, setFrameloop]);
 
-        <GlowSphere position={[-3.5, 1.5, -1]} color="#dc2626" speed={0.6} scale={0.9} />
-        <GlowSphere position={[4, -1.5, -3]} color="#16a34a" speed={0.4} scale={0.7} />
-        <GlowSphere position={[1, 3, -4]} color="#ef4444" speed={0.3} scale={0.4} />
-        <FloatingRing position={[3, 2, -2]} color="#ef4444" scale={0.5} />
-        <FloatingRing position={[-2.5, -2.5, -2]} color="#22c55e" scale={0.35} />
-        <FloatingRing position={[-1, 1, -5]} color="#ffffff" scale={0.25} />
-        <Particles />
-      </Suspense>
-    </Canvas>
-  );
+  return null;
 }
 
+// ── Scene ────────────────────────────────────────────────────────────────────
+
 export default function HeroScene() {
+  const [reducedMotion, setReducedMotion] = useState(false);
+
+  useEffect(() => {
+    const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
+    setReducedMotion(mq.matches);
+    const handler = (event: MediaQueryListEvent) => setReducedMotion(event.matches);
+    mq.addEventListener("change", handler);
+    return () => mq.removeEventListener("change", handler);
+  }, []);
+
+  // The CSS orb/mesh layer in Layout already carries the atmosphere; a static
+  // WebGL context would add cost for nothing.
+  if (reducedMotion) return null;
+
   return (
     <SceneErrorBoundary>
-      <Scene />
+      <div
+        className="w-full h-full"
+        style={{
+          opacity: 0.5,
+          // Keeps the centre column — where all the text lives — clear.
+          maskImage:
+            "radial-gradient(ellipse 65% 55% at 50% 45%, transparent 0%, black 78%)",
+          WebkitMaskImage:
+            "radial-gradient(ellipse 65% 55% at 50% 45%, transparent 0%, black 78%)",
+        }}
+      >
+        <Canvas
+          camera={{ position: [0, 0, 9], fov: 40 }}
+          gl={{ alpha: true, antialias: true, powerPreference: "high-performance" }}
+          dpr={[1, 1.75]}
+          style={{ background: "transparent" }}
+        >
+          <RenderGate />
+          <Suspense fallback={null}>
+            <SoftOrb position={[-6.5, 1.5, -7]} color="#dc2626" speed={0.6} scale={1.6} />
+            <SoftOrb position={[6.8, -1.8, -8]} color="#16a34a" speed={0.4} scale={1.3} />
+            <SoftOrb position={[2.5, 4.2, -10]} color="#ef4444" speed={0.3} scale={0.9} opacity={0.16} />
+            <SoftRing position={[5.5, 2.6, -6]} color="#ef4444" scale={1.1} />
+            <SoftRing position={[-5, -3.2, -6.5]} color="#22c55e" scale={0.85} />
+            <SoftRing position={[-2, 2.4, -11]} color="#f87171" scale={0.6} opacity={0.12} />
+            <Particles />
+          </Suspense>
+        </Canvas>
+      </div>
     </SceneErrorBoundary>
   );
 }

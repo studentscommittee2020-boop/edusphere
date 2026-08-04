@@ -1,4 +1,5 @@
 import { supabase } from "@/lib/supabase";
+import type { Major, Semester } from "@/types/database";
 
 // ── Admin Check ──────────────────────────────────────────────────────────────
 
@@ -17,25 +18,25 @@ export async function getAdminStats() {
   const [
     { count: examCount },
     { count: entranceCount },
-    { count: bookCount },
+    { count: materialCount },
     { count: eventCount },
-    { count: orderCount },
+    { count: enrollmentCount },
     { count: userCount },
   ] = await Promise.all([
     supabase.from("previous_exams").select("*", { count: "exact", head: true }),
     supabase.from("entrance_exams").select("*", { count: "exact", head: true }),
-    supabase.from("books").select("*", { count: "exact", head: true }),
+    supabase.from("course_materials").select("*", { count: "exact", head: true }),
     supabase.from("events").select("*", { count: "exact", head: true }),
-    supabase.from("orders").select("*", { count: "exact", head: true }),
+    supabase.from("student_enrollments").select("*", { count: "exact", head: true }),
     supabase.from("profiles").select("*", { count: "exact", head: true }),
   ]);
 
   return {
     exams: examCount ?? 0,
     entranceExams: entranceCount ?? 0,
-    books: bookCount ?? 0,
+    materials: materialCount ?? 0,
     events: eventCount ?? 0,
-    orders: orderCount ?? 0,
+    enrollments: enrollmentCount ?? 0,
     users: userCount ?? 0,
   };
 }
@@ -46,8 +47,8 @@ export async function createCourse(course: {
   title: string;
   title_fr: string;
   credits: number;
-  semester: string;
-  major: string;
+  semester: Semester;
+  major: Major;
   type: "common" | "major";
   track: "french" | "english";
   code?: string;
@@ -68,8 +69,8 @@ export async function updateCourse(
     title: string;
     title_fr: string;
     credits: number;
-    semester: string;
-    major: string;
+    semester: Semester;
+    major: Major;
     type: "common" | "major";
     track: "french" | "english";
     description: string;
@@ -96,8 +97,8 @@ export async function createPreviousExam(exam: {
   course_id: string;
   course_title: string;
   course_title_fr: string;
-  major: string;
-  semester: string;
+  major: Major;
+  semester: Semester;
   year: string;
   exam_type: "partiel" | "midterm" | "resit";
   pages: number;
@@ -118,8 +119,8 @@ export async function updatePreviousExam(
     course_id: string;
     course_title: string;
     course_title_fr: string;
-    major: string;
-    semester: string;
+    major: Major;
+    semester: Semester;
     year: string;
     exam_type: "partiel" | "midterm" | "resit";
     pages: number;
@@ -141,61 +142,6 @@ export async function deletePreviousExam(id: string) {
     .from("previous_exams")
     .delete()
     .eq("id", id);
-  return { error };
-}
-
-// ── Admin CRUD: Books ────────────────────────────────────────────────────────
-
-export async function createBook(book: {
-  title: string;
-  title_fr: string;
-  author: string;
-  price: number;
-  major: string;
-  semesters: string;
-  in_stock: boolean;
-  track: "french" | "english" | "both";
-  cover_image_url?: string;
-  related_courses?: string[];
-  description?: string;
-  description_fr?: string;
-}) {
-  const { data, error } = await supabase
-    .from("books")
-    .insert({ ...book, rating: 0 })
-    .select()
-    .single();
-  return { data, error };
-}
-
-export async function updateBook(
-  id: string,
-  updates: Partial<{
-    title: string;
-    title_fr: string;
-    author: string;
-    price: number;
-    major: string;
-    semesters: string;
-    in_stock: boolean;
-    track: "french" | "english" | "both";
-    cover_image_url: string | null;
-    related_courses: string[];
-    description: string;
-    description_fr: string;
-  }>
-) {
-  const { data, error } = await supabase
-    .from("books")
-    .update(updates)
-    .eq("id", id)
-    .select()
-    .single();
-  return { data, error };
-}
-
-export async function deleteBook(id: string) {
-  const { error } = await supabase.from("books").delete().eq("id", id);
   return { error };
 }
 
@@ -298,36 +244,10 @@ export async function deleteEntranceExam(id: string) {
   return { error };
 }
 
-// ── Admin: Orders Management ─────────────────────────────────────────────────
-
-export async function getAllOrders() {
-  const { data, error } = await supabase
-    .from("orders")
-    .select(
-      "*, order_items(*, books(id, title, title_fr, price, cover_image_url))"
-    )
-    .order("created_at", { ascending: false });
-  return { data, error };
-}
-
-export async function updateOrderStatus(
-  orderId: string,
-  status: "pending" | "confirmed" | "processing" | "shipped" | "delivered" | "cancelled"
-) {
-  const { data, error } = await supabase
-    .from("orders")
-    .update({ status })
-    .eq("id", orderId)
-    .select()
-    .single();
-  return { data, error };
-}
-
 // ── File Upload ──────────────────────────────────────────────────────────────
 
 const ALLOWED_MIME: Record<string, string[]> = {
   "exam-papers": ["application/pdf"],
-  "book-covers": ["image/jpeg", "image/png", "image/webp"],
   avatars: ["image/jpeg", "image/png", "image/webp"],
 };
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
@@ -350,6 +270,10 @@ export async function uploadFile(
     .upload(path, file, { upsert: true });
 
   if (error) return { url: null, error };
+
+  if (bucket === "exam-papers") {
+    return { url: data.path, error: null };
+  }
 
   const {
     data: { publicUrl },

@@ -1,10 +1,11 @@
-import { useState, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
 import { BookOpen, Download, ChevronRight, FolderOpen } from "lucide-react";
 import { useAppStore } from "@/store/appStore";
 import FilterChips, { ActiveFilter } from "@/components/FilterChips";
 import { toast } from "sonner";
+import { getEntranceExams, getExamDownloadUrl } from "@/services/exams";
 
 const SUBJECTS = ["All", "French", "English", "Math", "Economics"];
 const LANGS = ["All", "French", "English", "Arabic"];
@@ -17,12 +18,71 @@ const subjectColors: Record<string, string> = {
   Economics: "bg-secondary/15 text-secondary",
 };
 
+// Local shape adapted from the entrance_exams Supabase row (see Sessions.tsx
+// for the same DB-row -> UI-shape adaptation pattern). Only the fields this
+// page actually renders are carried over.
+interface EntranceExamCard {
+  id: string;
+  title: string;
+  titleFr: string;
+  subject: string;
+  examLang: string;
+  year: string;
+  pages: number;
+  description: string;
+  descriptionFr: string;
+  fileUrl: string | null;
+}
+
 export default function Exams() {
-  const { exams, language } = useAppStore();
+  const { language } = useAppStore();
+
+  const [exams, setExams] = useState<EntranceExamCard[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
   const [subject, setSubject] = useState("All");
   const [lang, setLang] = useState("All");
   const [year, setYear] = useState("All");
+
+  // Live data load — entrance exams are a global catalog (not scoped to a
+  // signed-in student), matching the getPreviousExams() pattern in
+  // Sessions.tsx. Errors degrade to an empty list rather than a crash.
+  useEffect(() => {
+    let isMounted = true;
+
+    async function load() {
+      try {
+        const { data, error } = await getEntranceExams();
+        if (!isMounted) return;
+        if (error) console.error("[Exams] getEntranceExams failed", error);
+        setExams(
+          (data ?? []).map((exam) => ({
+            id: exam.id,
+            title: exam.title,
+            titleFr: exam.title_fr,
+            subject: exam.subject,
+            examLang: exam.exam_lang,
+            year: exam.year,
+            pages: exam.pages,
+            description: exam.description,
+            descriptionFr: exam.description_fr,
+            fileUrl: exam.file_url,
+          })),
+        );
+      } catch (err) {
+        if (!isMounted) return;
+        console.error("[Exams] entrance exams load failed", err);
+        setExams([]);
+      } finally {
+        if (isMounted) setIsLoading(false);
+      }
+    }
+
+    void load();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   const filtered = useMemo(() => {
     return exams.filter((exam) => {
@@ -77,15 +137,14 @@ export default function Exams() {
           animate={{ opacity: 1, y: 0 }}
           className="mb-8"
         >
-          <div className="flex items-center gap-3 mb-2">
-            <div className="w-10 h-10 rounded-xl bg-gradient-green flex items-center justify-center">
-              <BookOpen className="w-5 h-5 text-white" />
-            </div>
-            <h1 className="font-display font-extrabold text-3xl text-foreground">
-              {language === "fr" ? "Examens d'Entrée" : "Entrance Exams"}
-            </h1>
-          </div>
-          <p className="text-muted-foreground text-sm">
+          <span className="eyebrow">
+            <BookOpen className="w-3.5 h-3.5" />
+            {language === "fr" ? "Préparation" : "Preparation"}
+          </span>
+          <h1 className="mt-2 font-display font-extrabold text-3xl lg:text-4xl text-gradient-chrome">
+            {language === "fr" ? "Examens d'Entrée" : "Entrance Exams"}
+          </h1>
+          <p className="mt-1.5 text-muted-foreground text-sm">
             {language === "fr"
               ? `${filtered.length} examens disponibles`
               : `${filtered.length} exams available`}
@@ -181,7 +240,46 @@ export default function Exams() {
         )}
 
         {/* Cards */}
-        {filtered.length === 0 ? (
+        {isLoading ? (
+          <div className="grid sm:grid-cols-2 xl:grid-cols-3 gap-5" aria-hidden="true">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <div key={i} className="surface overflow-hidden">
+                <div className="h-1 w-full bg-muted" />
+                <div className="p-5">
+                  <div className="flex flex-wrap gap-2 mb-3">
+                    <div className="skeleton h-5 w-20 rounded-full" />
+                    <div className="skeleton h-5 w-16 rounded-full" />
+                  </div>
+                  <div className="skeleton h-4 w-3/4 rounded mb-2" />
+                  <div className="skeleton h-3.5 w-full rounded mb-1.5" />
+                  <div className="skeleton h-3.5 w-2/3 rounded mb-4" />
+                  <div className="flex items-center justify-between pt-3 border-t border-border/50">
+                    <div className="skeleton h-3 w-12 rounded" />
+                    <div className="skeleton h-7 w-28 rounded-lg" />
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : exams.length === 0 ? (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="surface flex flex-col items-center text-center px-6 py-16"
+          >
+            <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center mb-4">
+              <BookOpen className="w-7 h-7 text-primary" />
+            </div>
+            <h3 className="font-display font-extrabold text-xl text-foreground">
+              {language === "fr" ? "Aucun examen d'entrée disponible" : "No entrance exams available"}
+            </h3>
+            <p className="mt-2 max-w-sm text-sm text-muted-foreground leading-relaxed">
+              {language === "fr"
+                ? "Les examens d'entrée apparaîtront ici dès qu'ils seront ajoutés."
+                : "Entrance exams will appear here once they're added."}
+            </p>
+          </motion.div>
+        ) : filtered.length === 0 ? (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -212,7 +310,7 @@ export default function Exams() {
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: i * 0.05, duration: 0.4 }}
-                  className="group rounded-2xl border border-border bg-card card-glow-green overflow-hidden hover:-translate-y-0.5 transition-all duration-300"
+                  className="group surface card-glow-green overflow-hidden hover:-translate-y-0.5 transition-all duration-300"
                 >
                   {/* Top accent — green */}
                   <div className="h-1 w-full bg-gradient-green" />
@@ -245,12 +343,22 @@ export default function Exams() {
                         <span>{exam.pages}p</span>
                       </div>
                       <button
-                        onClick={() => {
-                          if (exam.fileUrl) {
-                            window.open(exam.fileUrl, "_blank");
-                          } else {
+                        onClick={async () => {
+                          if (!exam.fileUrl) {
                             toast.info(language === "fr" ? "Fichier non disponible" : "File not available yet");
+                            return;
                           }
+                          // file_url is a private Supabase Storage path (same
+                          // "exam-papers" bucket previous_exams uses — see
+                          // services/admin.ts), not a public URL, so it must
+                          // be exchanged for a signed URL before opening.
+                          // Same pattern as Sessions.tsx's download handler.
+                          const { url, error } = await getExamDownloadUrl(exam.fileUrl);
+                          if (error || !url) {
+                            toast.error(language === "fr" ? "Impossible d'ouvrir le fichier" : "Could not open this file");
+                            return;
+                          }
+                          window.open(url, "_blank", "noopener,noreferrer");
                         }}
                         className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-secondary/10 text-secondary text-xs font-display font-semibold hover:bg-secondary/20 transition-colors"
                         aria-label={`Download ${exam.title}`}

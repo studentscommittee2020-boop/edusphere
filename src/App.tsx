@@ -1,19 +1,26 @@
-import { lazy, Suspense } from "react";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { lazy, Suspense, useEffect } from "react";
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { Toaster } from "sonner";
 import Layout from "./components/Layout";
 import { useAuth } from "./contexts/AuthContext";
+import { trackPageView } from "./lib/telemetry";
 
 // ── Page imports (lazy for code splitting) ────────────────────────────────────
 const Index     = lazy(() => import("./pages/Index"));
 const Sessions  = lazy(() => import("./pages/Sessions"));
 const Exams     = lazy(() => import("./pages/Exams"));
 const Events    = lazy(() => import("./pages/Events"));
-const Books     = lazy(() => import("./pages/Books"));
 const Admin     = lazy(() => import("./pages/Admin"));
 const About     = lazy(() => import("./pages/About"));
 const Auth      = lazy(() => import("./pages/Auth"));
 const Profile   = lazy(() => import("./pages/Profile"));
+const StudentAssignments = lazy(() => import("./pages/StudentAssignments"));
+const Schedule  = lazy(() => import("./pages/Schedule"));
+const MyCourses = lazy(() => import("./pages/MyCourses"));
+const OwnerConsole = lazy(() => import("./pages/OwnerConsole"));
+const Privacy   = lazy(() => import("./pages/Privacy"));
+const DoctorWorkspace = lazy(() => import("./pages/DoctorWorkspace"));
+const PrintDesk = lazy(() => import("./pages/PrintDesk"));
 const NotFound  = lazy(() => import("./pages/NotFound"));
 
 // ── Loading fallback ──────────────────────────────────────────────────────────
@@ -33,10 +40,50 @@ function AdminRoute({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
+function StudentRoute({ children }: { children: React.ReactNode }) {
+  const { isVerifiedStudent, isLoading } = useAuth();
+  if (isLoading) return <PageLoader />;
+  if (!isVerifiedStudent) return <Navigate to="/auth" replace />;
+  return <>{children}</>;
+}
+
+function DoctorRoute({ children }: { children: React.ReactNode }) {
+  const { isDoctor, isAdmin, isLoading } = useAuth();
+  if (isLoading) return <PageLoader />;
+  if (!isDoctor && !isAdmin) return <Navigate to="/" replace />;
+  return <>{children}</>;
+}
+
+function CommitteeRoute({ children }: { children: React.ReactNode }) {
+  const { isCommitteeAdmin, isAdmin, isLoading } = useAuth();
+  if (isLoading) return <PageLoader />;
+  if (!isCommitteeAdmin && !isAdmin) return <Navigate to="/" replace />;
+  return <>{children}</>;
+}
+
+function OwnerRoute({ children }: { children: React.ReactNode }) {
+  const { isOwner, isLoading } = useAuth();
+  if (isLoading) return <PageLoader />;
+  if (!isOwner) return <Navigate to="/" replace />;
+  return <>{children}</>;
+}
+
+/** Emits a page_view on every navigation. Must live inside the Router. */
+function RouteTelemetry() {
+  const location = useLocation();
+
+  useEffect(() => {
+    trackPageView(location.pathname);
+  }, [location.pathname]);
+
+  return null;
+}
+
 // ── App ───────────────────────────────────────────────────────────────────────
 export default function App() {
   return (
     <BrowserRouter>
+      <RouteTelemetry />
       <Toaster
         position="bottom-right"
         toastOptions={{
@@ -55,11 +102,16 @@ export default function App() {
           {/* Main app layout */}
           <Route element={<Layout />}>
             <Route path="/"          element={<Index />} />
-            <Route path="/sessions"  element={<Sessions />} />
+            <Route path="/sessions" element={<StudentRoute><Sessions /></StudentRoute>} />
+            <Route path="/schedule" element={<StudentRoute><Schedule /></StudentRoute>} />
+            <Route path="/my-courses" element={<StudentRoute><MyCourses /></StudentRoute>} />
+            <Route path="/assignments" element={<StudentRoute><StudentAssignments /></StudentRoute>} />
+            <Route path="/doctor" element={<DoctorRoute><DoctorWorkspace /></DoctorRoute>} />
+            <Route path="/print-desk" element={<CommitteeRoute><PrintDesk /></CommitteeRoute>} />
             <Route path="/exams"     element={<Exams />} />
             <Route path="/events"    element={<Events />} />
-            <Route path="/books"     element={<Books />} />
             <Route path="/about"     element={<About />} />
+            <Route path="/privacy"   element={<Privacy />} />
             <Route path="/profile"  element={<Profile />} />
 
             {/* Admin — protected */}
@@ -69,6 +121,16 @@ export default function App() {
                 <AdminRoute>
                   <Admin />
                 </AdminRoute>
+              }
+            />
+
+            {/* Owner — full read/write across every table and account */}
+            <Route
+              path="/owner"
+              element={
+                <OwnerRoute>
+                  <OwnerConsole />
+                </OwnerRoute>
               }
             />
 

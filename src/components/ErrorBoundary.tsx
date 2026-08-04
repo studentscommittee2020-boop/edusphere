@@ -1,5 +1,6 @@
 import { Component, ErrorInfo, ReactNode } from "react";
 import { AlertTriangle, RefreshCw } from "lucide-react";
+import { Sentry } from "@/lib/sentry";
 
 interface Props {
   children: ReactNode;
@@ -20,6 +21,12 @@ export default class ErrorBoundary extends Component<Props, State> {
 
   componentDidCatch(error: Error, info: ErrorInfo) {
     console.error("[ErrorBoundary]", error, info);
+    // React swallows the error once it is caught here, so Sentry only learns
+    // about it if we hand it over explicitly.
+    Sentry.withScope((scope) => {
+      scope.setContext("react", { componentStack: info.componentStack });
+      Sentry.captureException(error);
+    });
   }
 
   handleReset = () => {
@@ -28,7 +35,9 @@ export default class ErrorBoundary extends Component<Props, State> {
 
   render() {
     if (this.state.hasError) {
-      if (this.props.fallback) return this.props.fallback;
+      // Explicit check: `fallback={null}` is a valid "render nothing" request
+      // and must not fall through to the full-screen error UI.
+      if (this.props.fallback !== undefined) return this.props.fallback;
       return (
         <div className="min-h-screen flex items-center justify-center px-6">
           <div className="text-center max-w-sm">

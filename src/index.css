@@ -1,126 +1,305 @@
-@import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&family=JetBrains+Mono:wght@400;500&display=swap');
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
+/* ═══════════════════════════════════════════════════════════════════════════
+   EduSphere design system
+
+   The identity is unchanged — deep dark, signal red — but the ad-hoc values it
+   used to be built from are now a real token set:
+
+   · Surfaces are a 5-step elevation ramp, slightly cool rather than pure grey,
+     so stacked panels read as depth instead of as flat boxes.
+   · Red is a full 50–900 ramp. Components reference steps, never raw hsl().
+   · Motion, spacing and shadow are tokenised so timing is consistent
+     everywhere and can be tuned in one place.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
 @layer base {
   :root {
-    --background: 0 0% 4%;
-    --foreground: 0 0% 95%;
+    /* ── Surfaces: cool-tinted dark ramp ─────────────────────────────────── */
+    --surface-0: 225 12% 4%;    /* page */
+    --surface-1: 225 11% 7%;    /* card */
+    --surface-2: 225 10% 10%;   /* raised card, popover */
+    --surface-3: 225 9% 14%;    /* hover, input */
+    --surface-4: 225 8% 19%;    /* active, selected */
 
-    --card: 0 0% 8%;
-    --card-foreground: 0 0% 95%;
+    /* ── Red ramp ────────────────────────────────────────────────────────── */
+    --red-50:  0 86% 97%;
+    --red-100: 0 93% 94%;
+    --red-200: 0 96% 89%;
+    --red-300: 0 94% 82%;
+    --red-400: 0 91% 71%;
+    --red-500: 0 84% 60%;
+    --red-600: 0 72% 51%;       /* brand primary */
+    --red-700: 0 74% 42%;
+    --red-800: 0 70% 35%;
+    --red-900: 0 63% 31%;
 
-    --popover: 0 0% 8%;
-    --popover-foreground: 0 0% 95%;
+    /* ── Support hues ────────────────────────────────────────────────────── */
+    --green-500: 145 63% 47%;
+    --green-600: 145 63% 42%;
+    /* Third accent. Kept as a distinct RED step (not a new hue) so states that
+       must not read as "error" still separate from --red-600 by lightness. */
+    --accent-red-400: 0 91% 71%;
+    --accent-red-300: 0 94% 82%;
+    --blue-500:   213 94% 62%;
 
-    --primary: 0 72% 51%;
+    /* ── Semantic roles ──────────────────────────────────────────────────── */
+    --background: var(--surface-0);
+    --foreground: 220 14% 96%;
+
+    --card: var(--surface-1);
+    --card-foreground: var(--foreground);
+
+    --popover: var(--surface-2);
+    --popover-foreground: var(--foreground);
+
+    --primary: var(--red-600);
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 145 63% 42%;
+    --secondary: var(--green-600);
     --secondary-foreground: 0 0% 100%;
 
-    --muted: 0 0% 12%;
-    --muted-foreground: 0 0% 55%;
+    --muted: var(--surface-3);
+    --muted-foreground: 220 9% 60%;
 
-    --accent: 145 63% 42%;
-    --accent-foreground: 0 0% 100%;
+    --accent: var(--surface-3);
+    --accent-foreground: var(--foreground);
 
-    --destructive: 0 84% 60%;
+    --destructive: var(--red-500);
     --destructive-foreground: 0 0% 100%;
 
-    --border: 0 0% 15%;
-    --input: 0 0% 15%;
-    --ring: 0 72% 51%;
+    --success: var(--green-500);
+    --warning: var(--accent-red-400);
+    --info: var(--blue-500);
 
-    --radius: 1rem;
+    --border: 225 8% 17%;
+    --border-strong: 225 8% 24%;
+    --input: var(--surface-3);
+    --ring: var(--red-500);
 
+    /* ── Shape ───────────────────────────────────────────────────────────── */
+    --radius: 0.875rem;
+
+    /* ── Type ────────────────────────────────────────────────────────────── */
     --font-display: 'Syne', sans-serif;
     --font-body: 'DM Sans', sans-serif;
+    --font-mono: 'JetBrains Mono', ui-monospace, monospace;
 
-    --sidebar-w: 260px;
-    --sidebar-w-collapsed: 72px;
-    --sidebar-background: 0 0% 6%;
+    /* ── Motion ──────────────────────────────────────────────────────────── */
+    --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+    --ease-out-quad: cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    --ease-spring:   cubic-bezier(0.34, 1.56, 0.64, 1);
+    --duration-fast: 140ms;
+    --duration-base: 240ms;
+    --duration-slow: 420ms;
+
+    /* ── Layout ──────────────────────────────────────────────────────────── */
+    --sidebar-w: 264px;
+    --sidebar-w-collapsed: 76px;
+    --sidebar-background: var(--surface-1);
+    --header-h: 68px;
   }
-}
 
-@layer base {
-  * { @apply border-border; }
+  * {
+    @apply border-border;
+  }
+
+  html {
+    -webkit-text-size-adjust: 100%;
+    scroll-behavior: smooth;
+  }
+
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground antialiased;
     font-family: var(--font-body);
+    font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
+    text-rendering: optimizeLegibility;
   }
-  h1, h2, h3, h4, h5, h6 { font-family: var(--font-display); }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-display);
+    @apply tracking-tight;
+  }
+
+  /* A single visible, high-contrast focus treatment across the whole app. */
+  :focus-visible {
+    @apply outline-none ring-2 ring-ring ring-offset-2;
+    ring-offset-color: hsl(var(--background));
+  }
+
+  ::selection {
+    background: hsl(var(--red-600) / 0.35);
+    color: hsl(var(--foreground));
+  }
+
+  ::-webkit-scrollbar { width: 10px; height: 10px; }
+  ::-webkit-scrollbar-track { background: hsl(var(--surface-0)); }
+  ::-webkit-scrollbar-thumb {
+    background: hsl(var(--surface-3));
+    border-radius: 999px;
+    border: 2px solid hsl(var(--surface-0));
+  }
+  ::-webkit-scrollbar-thumb:hover { background: hsl(var(--surface-4)); }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
 }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   Components
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+@layer components {
+  /* Surface: the base panel every card in the app is built from. */
+  .surface {
+    background: hsl(var(--surface-1));
+    border: 1px solid hsl(var(--border));
+    border-radius: var(--radius);
+  }
+
+  .surface-raised {
+    background: hsl(var(--surface-2));
+    border: 1px solid hsl(var(--border));
+    border-radius: var(--radius);
+    box-shadow:
+      0 1px 2px hsl(0 0% 0% / 0.3),
+      0 8px 24px -12px hsl(0 0% 0% / 0.5);
+  }
+
+  /* Interactive card: lifts and picks up a red edge on hover. */
+  .surface-interactive {
+    background: hsl(var(--surface-1));
+    border: 1px solid hsl(var(--border));
+    border-radius: var(--radius);
+    transition:
+      transform var(--duration-base) var(--ease-out-expo),
+      border-color var(--duration-base) var(--ease-out-quad),
+      box-shadow var(--duration-base) var(--ease-out-quad),
+      background-color var(--duration-base) var(--ease-out-quad);
+  }
+  .surface-interactive:hover {
+    background: hsl(var(--surface-2));
+    border-color: hsl(var(--red-600) / 0.45);
+    transform: translateY(-2px);
+    box-shadow:
+      0 1px 2px hsl(0 0% 0% / 0.3),
+      0 18px 40px -18px hsl(var(--red-600) / 0.28),
+      0 0 0 1px hsl(var(--red-600) / 0.12);
+  }
+  .surface-interactive:active { transform: translateY(0); }
+
+  /* Hairline gradient that separates major page regions. */
+  .rule-glow {
+    height: 1px;
+    background: linear-gradient(
+      90deg,
+      transparent,
+      hsl(var(--border-strong)) 20%,
+      hsl(var(--red-600) / 0.4) 50%,
+      hsl(var(--border-strong)) 80%,
+      transparent
+    );
+  }
+
+  /* Section eyebrow — small caps label above a heading. */
+  .eyebrow {
+    @apply inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.18em];
+    color: hsl(var(--muted-foreground));
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   Utilities
+   ═══════════════════════════════════════════════════════════════════════════ */
 
 @layer utilities {
-  /* Gradients */
+  /* ── Text gradients ─────────────────────────────────────────────────────── */
   .text-gradient-hero {
     @apply bg-clip-text text-transparent;
-    background-image: linear-gradient(135deg, hsl(0,72%,58%) 0%, hsl(35,100%,60%) 50%, hsl(145,63%,50%) 100%);
+    background-image: linear-gradient(
+      135deg,
+      hsl(var(--red-400)) 0%,
+      hsl(var(--accent-red-400)) 48%,
+      hsl(var(--green-500)) 100%
+    );
   }
   .text-gradient-red {
     @apply bg-clip-text text-transparent;
-    background-image: linear-gradient(135deg, hsl(0,72%,58%), hsl(15,85%,55%));
+    background-image: linear-gradient(135deg, hsl(var(--red-400)), hsl(var(--red-700)));
   }
   .text-gradient-green {
     @apply bg-clip-text text-transparent;
-    background-image: linear-gradient(135deg, hsl(145,63%,42%), hsl(160,70%,45%));
+    background-image: linear-gradient(135deg, hsl(var(--green-500)), hsl(160 70% 45%));
+  }
+  /* Subtle top-down fade — use on large display headings. */
+  .text-gradient-chrome {
+    @apply bg-clip-text text-transparent;
+    background-image: linear-gradient(180deg, hsl(220 14% 98%) 0%, hsl(220 9% 62%) 100%);
   }
 
-  .bg-gradient-red   { background: linear-gradient(135deg, hsl(0,72%,51%) 0%, hsl(15,85%,50%) 100%); }
-  .bg-gradient-green { background: linear-gradient(135deg, hsl(145,63%,42%) 0%, hsl(160,70%,38%) 100%); }
+  .bg-gradient-red   { background: linear-gradient(135deg, hsl(var(--red-600)) 0%, hsl(15 85% 50%) 100%); }
+  .bg-gradient-green { background: linear-gradient(135deg, hsl(var(--green-600)) 0%, hsl(160 70% 38%) 100%); }
 
-  /* Mesh / atmospheric */
+  /* ── Atmosphere ─────────────────────────────────────────────────────────── */
   .bg-mesh {
     background:
-      radial-gradient(ellipse at 15% 20%, hsla(0,72%,51%,0.15) 0%, transparent 50%),
-      radial-gradient(ellipse at 85% 80%, hsla(145,63%,42%,0.12) 0%, transparent 50%);
+      radial-gradient(ellipse 80% 60% at 15% 20%, hsl(var(--red-600) / 0.13) 0%, transparent 60%),
+      radial-gradient(ellipse 70% 50% at 85% 80%, hsl(var(--green-600) / 0.10) 0%, transparent 60%);
   }
   .bg-mesh-intense {
     background:
-      radial-gradient(ellipse at 20% 30%, hsla(0,72%,51%,0.22) 0%, transparent 50%),
-      radial-gradient(ellipse at 80% 70%, hsla(145,63%,42%,0.16) 0%, transparent 50%);
+      radial-gradient(ellipse 80% 60% at 20% 25%, hsl(var(--red-600) / 0.20) 0%, transparent 60%),
+      radial-gradient(ellipse 70% 50% at 80% 75%, hsl(var(--green-600) / 0.14) 0%, transparent 60%),
+      radial-gradient(ellipse 50% 40% at 50% 0%, hsl(var(--accent-red-400) / 0.07) 0%, transparent 70%);
   }
   .bg-grid {
     background-image:
-      linear-gradient(hsla(0,0%,100%,0.05) 1px, transparent 1px),
-      linear-gradient(90deg, hsla(0,0%,100%,0.05) 1px, transparent 1px);
-    background-size: 60px 60px;
+      linear-gradient(hsl(0 0% 100% / 0.035) 1px, transparent 1px),
+      linear-gradient(90deg, hsl(0 0% 100% / 0.035) 1px, transparent 1px);
+    background-size: 64px 64px;
   }
   .bg-dots {
-    background-image: radial-gradient(hsla(0,0%,100%,0.07) 1px, transparent 1px);
-    background-size: 24px 24px;
+    background-image: radial-gradient(hsl(0 0% 100% / 0.06) 1px, transparent 1px);
+    background-size: 26px 26px;
+  }
+  /* Fades a background pattern out toward the bottom of its container. */
+  .mask-fade-b {
+    -webkit-mask-image: linear-gradient(180deg, black 0%, black 55%, transparent 100%);
+    mask-image: linear-gradient(180deg, black 0%, black 55%, transparent 100%);
   }
 
-  /* Animated floating orbs */
-  .bg-orb-red {
+  .bg-orb-red,
+  .bg-orb-green,
+  .bg-orb-accent {
     position: absolute;
-    width: 500px;
-    height: 500px;
     border-radius: 50%;
-    background: radial-gradient(circle, hsla(0,72%,51%,0.18) 0%, transparent 70%);
-    filter: blur(80px);
-    animation: float-orb-1 20s ease-in-out infinite;
+    filter: blur(90px);
+    pointer-events: none;
+  }
+  .bg-orb-red {
+    width: 520px; height: 520px;
+    background: radial-gradient(circle, hsl(var(--red-600) / 0.17) 0%, transparent 70%);
+    animation: float-orb-1 24s var(--ease-out-quad) infinite;
   }
   .bg-orb-green {
-    position: absolute;
-    width: 400px;
-    height: 400px;
-    border-radius: 50%;
-    background: radial-gradient(circle, hsla(145,63%,42%,0.14) 0%, transparent 70%);
-    filter: blur(80px);
-    animation: float-orb-2 25s ease-in-out infinite;
+    width: 420px; height: 420px;
+    background: radial-gradient(circle, hsl(var(--green-600) / 0.13) 0%, transparent 70%);
+    animation: float-orb-2 29s var(--ease-out-quad) infinite;
   }
-  .bg-orb-amber {
-    position: absolute;
-    width: 350px;
-    height: 350px;
-    border-radius: 50%;
-    background: radial-gradient(circle, hsla(35,100%,55%,0.10) 0%, transparent 70%);
-    filter: blur(80px);
-    animation: float-orb-3 22s ease-in-out infinite;
+  .bg-orb-accent {
+    width: 360px; height: 360px;
+    background: radial-gradient(circle, hsl(var(--accent-red-400) / 0.09) 0%, transparent 70%);
+    animation: float-orb-3 26s var(--ease-out-quad) infinite;
   }
 
   @keyframes float-orb-1 {
@@ -141,22 +320,53 @@
     66%      { transform: translate(-60px, -40px); }
   }
 
-  /* Card glow */
+  /* ── Legacy aliases ─────────────────────────────────────────────────────
+     Kept so pages not yet migrated to .surface-interactive keep working. */
   .card-glow {
-    box-shadow: 0 0 0 1px hsla(0,0%,100%,0.06);
-    transition: all 0.4s cubic-bezier(0.4,0,0.2,1);
+    box-shadow: 0 0 0 1px hsl(0 0% 100% / 0.06);
+    transition: all var(--duration-slow) var(--ease-out-quad);
   }
   .card-glow:hover {
     box-shadow:
-      0 0 0 1px hsla(0,72%,51%,0.3),
-      0 20px 60px -15px hsla(0,72%,51%,0.15),
-      0 0 40px -10px hsla(0,72%,51%,0.10);
+      0 0 0 1px hsl(var(--red-600) / 0.3),
+      0 20px 60px -15px hsl(var(--red-600) / 0.15);
   }
   .card-glow-green:hover {
     box-shadow:
-      0 0 0 1px hsla(145,63%,42%,0.3),
-      0 20px 60px -15px hsla(145,63%,42%,0.15),
-      0 0 40px -10px hsla(145,63%,42%,0.10);
+      0 0 0 1px hsl(var(--green-600) / 0.3),
+      0 20px 60px -15px hsl(var(--green-600) / 0.15);
   }
 
+  /* ── Effects ────────────────────────────────────────────────────────────── */
+  .glass {
+    background: hsl(var(--surface-1) / 0.72);
+    backdrop-filter: blur(16px) saturate(160%);
+    -webkit-backdrop-filter: blur(16px) saturate(160%);
+    border: 1px solid hsl(0 0% 100% / 0.07);
+  }
+
+  /* Loading placeholder. Pair with a fixed height to avoid layout shift. */
+  .skeleton {
+    background: linear-gradient(
+      90deg,
+      hsl(var(--surface-2)) 25%,
+      hsl(var(--surface-3)) 37%,
+      hsl(var(--surface-2)) 63%
+    );
+    background-size: 400% 100%;
+    animation: shimmer 1.6s linear infinite;
+  }
+
+  @keyframes shimmer {
+    0%   { background-position: 100% 0; }
+    100% { background-position: -100% 0; }
+  }
+
+  .animate-rise {
+    animation: rise var(--duration-slow) var(--ease-out-expo) both;
+  }
+  @keyframes rise {
+    from { opacity: 0; transform: translateY(12px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
 }

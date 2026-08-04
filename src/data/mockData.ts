@@ -1,4 +1,4 @@
-import type { Course, PreviousExam, Book, Exam, EventItem } from "@/store/appStore";
+import type { Course, PreviousExam, Exam, EventItem } from "@/store/appStore";
 
 // ── FRENCH TRACK COURSES ─────────────────────────────────────────────────────
 export const frenchCourses: Course[] = [
@@ -144,33 +144,6 @@ export const defaultPreviousExams: PreviousExam[] = [
   { id:"pe30",courseId:"fmis6",courseTitle:"Data Science",courseTitleFr:"Science des Données",major:"MIS",semester:"LS6",year:"2025",examType:"final",pages:6,rating:4.9,track:"french"},
   { id:"pe31",courseId:"ff7",courseTitle:"Financial Modeling",courseTitleFr:"Modélisation Financière",major:"Finance",semester:"LS6",year:"2025",examType:"midterms",pages:5,rating:4.7,track:"french"},
   { id:"pe32",courseId:"fmk6",courseTitle:"International Marketing",courseTitleFr:"Marketing International",major:"Marketing",semester:"LS6",year:"2025",examType:"final",pages:4,rating:4.5,track:"french"},
-];
-
-export const defaultBooks: Book[] = [
-  { id:1,title:"Principles of Accounting",titleFr:"Principes de Comptabilité",author:"Weygandt & Kieso",price:2500,rating:4.7,major:"Common",semesters:"LS1, LS2",inStock:true,relatedCourses:["fc1","fc8"],track:"both"},
-  { id:2,title:"Business Mathematics",titleFr:"Mathématiques des Affaires",author:"Clendenen & Salzman",price:2200,rating:4.4,major:"Common",semesters:"LS1, LS2",inStock:true,relatedCourses:["fc2","fc17"],track:"both"},
-  { id:3,title:"Principles of Economics",titleFr:"Principes d'Économie",author:"Mankiw",price:3000,rating:4.8,major:"Common",semesters:"LS1, LS2",inStock:true,relatedCourses:["fc4","fc12"],track:"both"},
-  { id:4,title:"Management: An Introduction",titleFr:"Introduction au Management",author:"Robbins & Coulter",price:2800,rating:4.5,major:"Common",semesters:"LS2",inStock:false,relatedCourses:["fc7"],track:"both"},
-  { id:5,title:"Marketing Essentials",titleFr:"Fondamentaux du Marketing",author:"Kotler & Armstrong",price:2600,rating:4.6,major:"Common",semesters:"LS2",inStock:true,relatedCourses:["fc9"],track:"both"},
-  { id:6,title:"Business Statistics",titleFr:"Statistiques de Gestion",author:"Groebner et al.",price:2400,rating:4.3,major:"Common",semesters:"LS2, LS3",inStock:true,relatedCourses:["fc10"],track:"both"},
-  { id:7,title:"Financial Statement Analysis",titleFr:"Analyse des États Financiers",author:"White & Sondhi",price:3200,rating:4.7,major:"Common",semesters:"LS3",inStock:true,relatedCourses:["fc18"],track:"both"},
-  { id:8,title:"Auditing and Assurance",titleFr:"Audit et Assurance",author:"Arens & Elder",price:3500,rating:4.8,major:"Audit & Accounting",semesters:"LS5, LS6",inStock:true,relatedCourses:["fa5","fa8"],track:"both"},
-  { id:9,title:"Tax Accounting Guide",titleFr:"Guide de Comptabilité Fiscale",author:"Pratt & Kulsrud",price:2900,rating:4.5,major:"Audit & Accounting",semesters:"LS5",inStock:true,relatedCourses:["fa7"],track:"french"},
-  { id:10,title:"Corporate Finance",titleFr:"Finance d'Entreprise",author:"Brealey & Myers",price:3800,rating:4.9,major:"Finance",semesters:"LS4, LS5",inStock:true,relatedCourses:["ff2","ff6"],track:"both"},
-  { id:11,title:"Investment Analysis",titleFr:"Analyse des Investissements",author:"Reilly & Brown",price:3400,rating:4.6,major:"Finance",semesters:"LS4, LS5",inStock:false,relatedCourses:["ff1","ff4"],track:"both"},
-  { id:12,title:"Financial Derivatives",titleFr:"Produits Dérivés Financiers",author:"Hull",price:4000,rating:4.7,major:"Finance",semesters:"LS6",inStock:true,relatedCourses:["ff8"],track:"both"},
-  { id:13,title:"Consumer Behavior",titleFr:"Comportement du Consommateur",author:"Schiffman & Kanuk",price:2700,rating:4.4,major:"Marketing",semesters:"LS4",inStock:true,relatedCourses:["fmk1"],track:"both"},
-  { id:14,title:"Digital Marketing Strategy",titleFr:"Stratégie de Marketing Digital",author:"Chaffey & Ellis-Chadwick",price:2800,rating:4.5,major:"Marketing",semesters:"LS4, LS5",inStock:true,relatedCourses:["fmk2","fmk8"],track:"both"},
-  { id:15,title:"Strategic Management",titleFr:"Management Stratégique",author:"Thompson & Strickland",price:3100,rating:4.6,major:"Management",semesters:"LS4, LS5",inStock:true,relatedCourses:["fmg1"],track:"both"},
-  { id:16,title:"Project Management Professional",titleFr:"Management de Projets",author:"PMBOK Guide",price:3600,rating:4.8,major:"Management",semesters:"LS5",inStock:false,relatedCourses:["fmg3"],track:"both"},
-  { id:17,title:"Database Systems",titleFr:"Systèmes de Bases de Données",author:"Connolly & Begg",price:3300,rating:4.7,major:"MIS",semesters:"LS4, LS5",inStock:true,relatedCourses:["fmis1","fmis3"],track:"both"},
-  { id:18,title:"Cybersecurity Fundamentals",titleFr:"Fondamentaux de la Cybersécurité",author:"Kim & Solomon",price:3000,rating:4.5,major:"MIS",semesters:"LS5",inStock:true,relatedCourses:["fmis5"],track:"both"},
-  { id:19,title:"Data Science from Scratch",titleFr:"Science des Données",author:"Joel Grus",price:2900,rating:4.6,major:"MIS",semesters:"LS6",inStock:true,relatedCourses:["fmis6"],track:"english"},
-  { id:20,title:"Operations Research",titleFr:"Recherche Opérationnelle",author:"Hillier & Lieberman",price:3200,rating:4.7,major:"Audit & Accounting",semesters:"LS4",inStock:true,relatedCourses:["fa1","ea1"],track:"both"},
-  { id:21,title:"International Marketing",titleFr:"Marketing International",author:"Cateora & Graham",price:2800,rating:4.4,major:"Marketing",semesters:"LS6",inStock:true,relatedCourses:["fmk6"],track:"both"},
-  { id:22,title:"Entrepreneurship",titleFr:"Entrepreneuriat",author:"Hisrich & Peters",price:2600,rating:4.3,major:"Management",semesters:"LS6",inStock:false,relatedCourses:["fmg7"],track:"both"},
-  { id:23,title:"Money Banking and Finance",titleFr:"Monnaie Banque et Finance",author:"Mishkin",price:3100,rating:4.6,major:"Audit & Accounting",semesters:"LS4",inStock:true,relatedCourses:["fa2","ea2"],track:"both"},
-  { id:24,title:"ERP with SAP",titleFr:"ERP avec SAP",author:"Magal & Word",price:3400,rating:4.5,major:"MIS",semesters:"LS5",inStock:true,relatedCourses:["fmis4"],track:"both"},
 ];
 
 export const defaultExams: Exam[] = [

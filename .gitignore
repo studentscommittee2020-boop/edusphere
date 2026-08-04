@@ -9,6 +9,11 @@ node_modules/
 # build
 dist/
 dist-ssr/
+*.tsbuildinfo
+
+# supabase cli local state — holds the linked project ref, org id and the
+# account email in the project name. Machine-local, never versioned.
+supabase/.temp/
 
 # editor / tooling
 .vscode/*

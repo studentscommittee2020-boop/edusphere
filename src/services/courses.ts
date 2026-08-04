@@ -1,9 +1,10 @@
 import { supabase } from "@/lib/supabase";
 import { escapeLike } from "@/lib/utils";
+import type { Major, Semester } from "@/types/database";
 
 export interface CourseFilters {
-  major?: string;
-  semester?: string;
+  major?: Major | "all";
+  semester?: Semester | "all";
   track?: "french" | "english";
   type?: "common" | "major";
   search?: string;
