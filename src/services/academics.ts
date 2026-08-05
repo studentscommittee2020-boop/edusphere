@@ -87,6 +87,74 @@ export function groupByDay(
   return days;
 }
 
+// ── Terms ────────────────────────────────────────────────────────────────────
+//
+// getSchedule(studentId) with no filter returns every term ever synced —
+// sync_student_academics() replaces schedule_entries per (academic_year,
+// semester), so old terms are never deleted, only superseded. Rendering that
+// straight to a single-week grid stacks two or three terms of classes on top
+// of each other. These helpers let the page keep fetching everything (it
+// still needs the full set to offer a term switcher) while showing exactly
+// one term at a time, client-side.
+
+export interface ScheduleTerm {
+  academicYear: string;
+  semester: string;
+}
+
+/** Stable identity for a term — switcher state and filtering both key off this. */
+export function termKey(term: ScheduleTerm): string {
+  return `${term.academicYear}__${term.semester}`;
+}
+
+/**
+ * Distinct terms present in a set of schedule entries, most recently synced
+ * first — so `terms[0]` is always a sensible "current term" default.
+ *
+ * Deliberately keyed off each entry's own `synced_at`, not off
+ * profiles.semester: the sync Edge Function now leaves profiles.semester
+ * alone once it is first set (see its handoff note — a routine profile
+ * refresh must not silently revoke a student's in-progress assignments),
+ * so that field can lag reality indefinitely and would make a stale term
+ * look "current" forever. `synced_at` has no such staleness problem — it is
+ * stamped fresh by sync_student_academics() every time a term is actually
+ * (re)synced. Ties fall back to academic_year/semester (fixed-width
+ * "YYYY-YYYY" sorts lexicographically = chronologically) purely for a
+ * deterministic order.
+ */
+export function listScheduleTerms(entries: ScheduleEntryWithCourse[]): ScheduleTerm[] {
+  const latestByKey = new Map<string, { term: ScheduleTerm; syncedAt: string }>();
+  for (const entry of entries) {
+    const term: ScheduleTerm = { academicYear: entry.academic_year, semester: entry.semester };
+    const key = termKey(term);
+    const existing = latestByKey.get(key);
+    if (!existing || entry.synced_at > existing.syncedAt) {
+      latestByKey.set(key, { term, syncedAt: entry.synced_at });
+    }
+  }
+  return Array.from(latestByKey.values())
+    .sort((a, b) => {
+      if (a.syncedAt !== b.syncedAt) return b.syncedAt.localeCompare(a.syncedAt);
+      if (a.term.academicYear !== b.term.academicYear) {
+        return b.term.academicYear.localeCompare(a.term.academicYear);
+      }
+      return b.term.semester.localeCompare(a.term.semester);
+    })
+    .map((x) => x.term);
+}
+
+/** Entries belonging to exactly one term. `term: null` returns everything unfiltered. */
+export function filterEntriesByTerm(
+  entries: ScheduleEntryWithCourse[],
+  term: ScheduleTerm | null,
+): ScheduleEntryWithCourse[] {
+  if (!term) return entries;
+  const key = termKey(term);
+  return entries.filter(
+    (entry) => termKey({ academicYear: entry.academic_year, semester: entry.semester }) === key,
+  );
+}
+
 /**
  * The display title for a course.
  *

@@ -12,6 +12,26 @@
 --
 -- Conventions follow 008: SECURITY DEFINER + STABLE + `SET search_path` on all
 -- predicate helpers, audit triggers via public.audit_portal_change().
+--
+-- AMENDED (still pre-launch, never executed against any database — edited in
+-- place rather than patched with a follow-up migration): a business-logic
+-- audit of sync_student_academics() found it treated "what the university
+-- said this minute" as complete and authoritative when it may be partial,
+-- transient, or reshaped. Fixed here: (1) an empty/reshaped schedule
+-- response no longer wipes an existing timetable — see the
+-- p_schedule_authoritative comment on the function; (2) academic_sync_state
+-- now records real 'partial'/'failed' statuses plus which course codes
+-- failed to resolve, instead of a hardcoded 'ok'; (3) enrolments absent from
+-- an authoritative feed for a (year, semester) are retired (status
+-- 'withdrawn'), scoped so history in other terms is never touched and a
+-- non-authoritative sync never retires anything. A fourth and fifth defect —
+-- the schedule UI stacking every synced term, and a routine profile refresh
+-- silently revoking assignment visibility via migration 008's
+-- assignment_visible_to_current_student() — are fixed outside this file (the
+-- former in src/pages/Schedule.tsx + src/services/academics.ts; the latter
+-- partially in the Edge Function, with the durable fix flagged as
+-- out-of-scope 008 work — see the sync function's Edge Function caller for
+-- both).
 
 -- ═══════════════════════════════════════════════════════════════════════════
 -- 1. OWNER TIER
@@ -190,110 +210,261 @@ CREATE TABLE public.academic_sync_state (
   student_id     UUID PRIMARY KEY REFERENCES public.profiles(id) ON DELETE CASCADE,
   last_synced_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   last_status    TEXT NOT NULL DEFAULT 'ok' CHECK (last_status IN ('ok', 'failed', 'partial')),
+  -- The (year, semester) this row's status/counts describe — the term the
+  -- most recent sync call targeted. Lets a client show "which term is
+  -- current" from a single authoritative row instead of guessing from
+  -- schedule_entries, and instead of profiles.semester, which — after the
+  -- fix in sync_student_academics() below — may deliberately stop tracking
+  -- the university once set.
+  academic_year  TEXT,
+  semester       TEXT,
   entry_count    INTEGER NOT NULL DEFAULT 0,
-  course_count   INTEGER NOT NULL DEFAULT 0
+  course_count   INTEGER NOT NULL DEFAULT 0,
+  -- Enrolment course codes the university fed us that did not resolve to a
+  -- row in public.courses. Previously dropped with a silent CONTINUE and no
+  -- trace anywhere — a student whose courses failed to resolve saw an empty
+  -- "My Courses" next to a cheerful, unqualified "last synced" timestamp.
+  -- Codes are catalogue identifiers (e.g. "ACC301"), not personal data, so
+  -- they are safe to retain for staff triage — unlike a file number or a raw
+  -- university payload, which this migration never persists anywhere.
+  unmatched_course_count INTEGER NOT NULL DEFAULT 0,
+  unmatched_course_codes TEXT[] NOT NULL DEFAULT '{}'
 );
 
 -- Replaces a student's academic snapshot atomically. Called only by the
 -- university-sync Edge Function under the service role.
+--
+-- p_schedule_authoritative / p_enrollments_authoritative (business-logic
+-- audit fix, folded in before this migration ever ran — see the five
+-- defects below): whether the caller's raw university response actually had
+-- the SHAPE of a real answer — an `entries`/`courses` array present, even if
+-- empty — as opposed to a response missing that key entirely or reshaped by
+-- an outage, a maintenance window, or a contract change. This is computed by
+-- the Edge Function from the RAW payload (Array.isArray(payload.entries) /
+-- Array.isArray(payload.courses)) and passed in explicitly, because by the
+-- time p_schedule/p_enrollments reach this function, parseSchedule() /
+-- parseEnrollments() have already collapsed "the key was missing" and "the
+-- key was a genuinely empty array" into the identical JSONB `[]` — that
+-- distinction is gone from the data itself, so SQL cannot recover it no
+-- matter how it inspects p_schedule/p_enrollments. Guessing here (e.g.
+-- "empty array = the fetch failed") would be wrong on exactly the day it
+-- matters most: a real semester boundary, when an empty timetable or course
+-- list is completely normal. Both default to FALSE — fail closed — so any
+-- future caller that forgets to pass them explicitly gets the SAFE (do not
+-- destroy) behaviour, never the destructive one.
 CREATE OR REPLACE FUNCTION public.sync_student_academics(
-  p_student_id    UUID,
-  p_academic_year TEXT,
-  p_semester      TEXT,
-  p_enrollments   JSONB,
-  p_schedule      JSONB
+  p_student_id                UUID,
+  p_academic_year              TEXT,
+  p_semester                   TEXT,
+  p_enrollments                JSONB,
+  p_schedule                   JSONB,
+  p_schedule_authoritative     BOOLEAN DEFAULT FALSE,
+  p_enrollments_authoritative  BOOLEAN DEFAULT FALSE
 )
 RETURNS JSONB AS $$
 DECLARE
-  enrollment      JSONB;
-  entry           JSONB;
-  resolved_course UUID;
-  course_total    INTEGER := 0;
-  entry_total     INTEGER := 0;
+  enrollment          JSONB;
+  entry               JSONB;
+  resolved_course     UUID;
+  course_total        INTEGER := 0;
+  entry_total         INTEGER := 0;
+  retired_total        INTEGER := 0;
+  unmatched_total      INTEGER := 0;
+  unmatched_codes      TEXT[] := '{}';
+  current_course_ids   UUID[] := '{}';
+  computed_status       TEXT;
+  -- Defensive: a NULL boolean must still branch as "not authoritative", not
+  -- as an error or an accidental TRUE. Everything below reads these locals,
+  -- never the raw parameters.
+  v_schedule_ok       BOOLEAN := COALESCE(p_schedule_authoritative, FALSE);
+  v_enrollments_ok    BOOLEAN := COALESCE(p_enrollments_authoritative, FALSE);
 BEGIN
   -- Service role only: auth.uid() is NULL when called with the service key.
   IF auth.uid() IS NOT NULL AND NOT public.is_owner() THEN
     RAISE EXCEPTION 'sync_student_academics is service-role only';
   END IF;
 
-  FOR enrollment IN SELECT * FROM jsonb_array_elements(COALESCE(p_enrollments, '[]'::JSONB))
-  LOOP
-    SELECT id INTO resolved_course
-    FROM public.courses
-    WHERE code = (enrollment ->> 'course_code')
-    LIMIT 1;
+  -- ── Enrolments ─────────────────────────────────────────────────────────
+  -- Gated on v_enrollments_ok end-to-end (merge AND retirement): an
+  -- unauthoritative feed is not selectively trusted for the additive half
+  -- and distrusted only for the destructive half — a reshaped/broken
+  -- response could just as easily carry a wrong status or grade for a real
+  -- course as it could omit one. When not authoritative this call makes NO
+  -- enrolment writes at all and the prior snapshot stands untouched.
+  IF v_enrollments_ok THEN
+    FOR enrollment IN SELECT * FROM jsonb_array_elements(COALESCE(p_enrollments, '[]'::JSONB))
+    LOOP
+      SELECT id INTO resolved_course
+      FROM public.courses
+      WHERE code = (enrollment ->> 'course_code')
+      LIMIT 1;
 
-    CONTINUE WHEN resolved_course IS NULL;
+      IF resolved_course IS NULL THEN
+        -- Previously a silent CONTINUE. Now counted and named — see the
+        -- comment on academic_sync_state.unmatched_course_codes above.
+        unmatched_total := unmatched_total + 1;
+        unmatched_codes := array_append(
+          unmatched_codes, COALESCE(enrollment ->> 'course_code', '(missing course_code)')
+        );
+        CONTINUE;
+      END IF;
 
-    INSERT INTO public.student_enrollments (
-      student_id, course_id, academic_year, semester, status, grade, source, synced_at
-    ) VALUES (
-      p_student_id,
-      resolved_course,
-      p_academic_year,
-      COALESCE(enrollment ->> 'semester', p_semester),
-      COALESCE(enrollment ->> 'status', 'enrolled'),
-      NULLIF(enrollment ->> 'grade', '')::NUMERIC,
-      'university',
-      NOW()
-    )
-    ON CONFLICT (student_id, course_id, academic_year, semester)
-    DO UPDATE SET
-      status    = EXCLUDED.status,
-      grade     = EXCLUDED.grade,
-      synced_at = NOW();
+      INSERT INTO public.student_enrollments (
+        student_id, course_id, academic_year, semester, status, grade, source, synced_at
+      ) VALUES (
+        p_student_id,
+        resolved_course,
+        p_academic_year,
+        COALESCE(enrollment ->> 'semester', p_semester),
+        COALESCE(enrollment ->> 'status', 'enrolled'),
+        NULLIF(enrollment ->> 'grade', '')::NUMERIC,
+        'university',
+        NOW()
+      )
+      ON CONFLICT (student_id, course_id, academic_year, semester)
+      DO UPDATE SET
+        status    = EXCLUDED.status,
+        grade     = EXCLUDED.grade,
+        synced_at = NOW();
 
-    course_total := course_total + 1;
-  END LOOP;
+      course_total := course_total + 1;
 
-  -- The schedule is authoritative per (year, semester): replace, don't merge,
-  -- so dropped classes disappear instead of lingering.
-  DELETE FROM public.schedule_entries
-  WHERE student_id = p_student_id
-    AND academic_year = p_academic_year
-    AND semester = p_semester;
+      -- Track which courses the feed placed in THIS call's target term, so
+      -- the retirement step below knows what is still current. The INSERT
+      -- above always writes academic_year = p_academic_year, so the only
+      -- axis left to check is the same per-record semester fallback it used.
+      IF COALESCE(enrollment ->> 'semester', p_semester) = p_semester THEN
+        current_course_ids := array_append(current_course_ids, resolved_course);
+      END IF;
+    END LOOP;
 
-  FOR entry IN SELECT * FROM jsonb_array_elements(COALESCE(p_schedule, '[]'::JSONB))
-  LOOP
-    SELECT id INTO resolved_course
-    FROM public.courses
-    WHERE code = (entry ->> 'course_code')
-    LIMIT 1;
+    -- Retire enrolments that were 'enrolled' for THIS exact (year, semester)
+    -- but have disappeared from the feed — a dropped course must stop
+    -- granting access to that course's materials via
+    -- current_student_course_ids(). Scoped on three independent axes so it
+    -- cannot reach outside its lane:
+    --   1. academic_year/semester match the term this call is for — a
+    --      completed enrolment from a different term is a different row
+    --      and is never touched.
+    --   2. status = 'enrolled' only — 'completed' / 'failed' / already-
+    --      'withdrawn' rows are left alone; this is not a status-downgrade
+    --      path for history.
+    --   3. The whole enrolments block already required v_enrollments_ok —
+    --      an unauthoritative feed retires nothing, or the empty-payload
+    --      destruction from defect #1 comes back wearing a different hat.
+    UPDATE public.student_enrollments
+    SET status = 'withdrawn', synced_at = NOW()
+    WHERE student_id = p_student_id
+      AND academic_year = p_academic_year
+      AND semester = p_semester
+      AND status = 'enrolled'
+      AND NOT (course_id = ANY (current_course_ids));
 
-    INSERT INTO public.schedule_entries (
-      student_id, course_id, course_label, academic_year, semester,
-      day_of_week, starts_at, ends_at, room, instructor, kind, synced_at
-    ) VALUES (
-      p_student_id,
-      resolved_course,
-      COALESCE(NULLIF(entry ->> 'course_label', ''), entry ->> 'course_code', 'Untitled'),
-      p_academic_year,
-      p_semester,
-      (entry ->> 'day_of_week')::SMALLINT,
-      (entry ->> 'starts_at')::TIME,
-      (entry ->> 'ends_at')::TIME,
-      COALESCE(entry ->> 'room', ''),
-      COALESCE(entry ->> 'instructor', ''),
-      COALESCE(entry ->> 'kind', 'lecture'),
-      NOW()
-    );
+    GET DIAGNOSTICS retired_total = ROW_COUNT;
+  END IF;
 
-    entry_total := entry_total + 1;
-  END LOOP;
+  -- ── Schedule ───────────────────────────────────────────────────────────
+  -- The schedule is authoritative per (year, semester): replace, don't
+  -- merge, so dropped classes disappear instead of lingering — but ONLY
+  -- when v_schedule_ok says this response is trustworthy enough to act on.
+  -- An unauthoritative response leaves the existing timetable exactly as it
+  -- was rather than deleting it on the strength of a payload we don't
+  -- trust. A genuinely empty timetable (school break, exam-only week) still
+  -- replaces down to zero rows, because the caller told us the empty array
+  -- was the real answer, not a symptom of failure.
+  IF v_schedule_ok THEN
+    DELETE FROM public.schedule_entries
+    WHERE student_id = p_student_id
+      AND academic_year = p_academic_year
+      AND semester = p_semester;
 
-  INSERT INTO public.academic_sync_state (student_id, last_synced_at, last_status, entry_count, course_count)
-  VALUES (p_student_id, NOW(), 'ok', entry_total, course_total)
+    FOR entry IN SELECT * FROM jsonb_array_elements(COALESCE(p_schedule, '[]'::JSONB))
+    LOOP
+      SELECT id INTO resolved_course
+      FROM public.courses
+      WHERE code = (entry ->> 'course_code')
+      LIMIT 1;
+
+      INSERT INTO public.schedule_entries (
+        student_id, course_id, course_label, academic_year, semester,
+        day_of_week, starts_at, ends_at, room, instructor, kind, synced_at
+      ) VALUES (
+        p_student_id,
+        resolved_course,
+        COALESCE(NULLIF(entry ->> 'course_label', ''), entry ->> 'course_code', 'Untitled'),
+        p_academic_year,
+        p_semester,
+        (entry ->> 'day_of_week')::SMALLINT,
+        (entry ->> 'starts_at')::TIME,
+        (entry ->> 'ends_at')::TIME,
+        COALESCE(entry ->> 'room', ''),
+        COALESCE(entry ->> 'instructor', ''),
+        COALESCE(entry ->> 'kind', 'lecture'),
+        NOW()
+      );
+
+      entry_total := entry_total + 1;
+    END LOOP;
+  ELSE
+    -- Not authoritative: we wrote nothing, but academic_sync_state.
+    -- entry_count is documented (and, elsewhere, trusted) as "how big is
+    -- this student's timetable for this term right now", not "how many rows
+    -- did this call write". Report the TRUE current count instead of 0, or
+    -- a skipped sync would make a perfectly intact timetable look wiped —
+    -- the exact false signal defect #1 exists to prevent, just relocated
+    -- into the status row instead of the table itself.
+    SELECT COUNT(*) INTO entry_total
+    FROM public.schedule_entries
+    WHERE student_id = p_student_id
+      AND academic_year = p_academic_year
+      AND semester = p_semester;
+  END IF;
+
+  -- ── Status + audit trail ──────────────────────────────────────────────
+  -- Real statuses instead of a hardcoded 'ok'. 'failed' means neither half
+  -- of this call was trustworthy enough to act on (nothing destroyed,
+  -- nothing retired, nothing merged — the prior snapshot stands untouched
+  -- end to end); 'partial' covers everything in between (one side
+  -- authoritative and the other not, or courses that came back but didn't
+  -- resolve against the catalogue); 'ok' only when both feeds were
+  -- authoritative and every course code resolved.
+  computed_status := CASE
+    WHEN NOT v_schedule_ok AND NOT v_enrollments_ok THEN 'failed'
+    WHEN v_schedule_ok AND v_enrollments_ok AND unmatched_total = 0 THEN 'ok'
+    ELSE 'partial'
+  END;
+
+  INSERT INTO public.academic_sync_state (
+    student_id, last_synced_at, last_status, academic_year, semester,
+    entry_count, course_count, unmatched_course_count, unmatched_course_codes
+  )
+  VALUES (
+    p_student_id, NOW(), computed_status, p_academic_year, p_semester,
+    entry_total, course_total, unmatched_total, unmatched_codes
+  )
   ON CONFLICT (student_id) DO UPDATE SET
-    last_synced_at = NOW(),
-    last_status    = 'ok',
-    entry_count    = EXCLUDED.entry_count,
-    course_count   = EXCLUDED.course_count;
+    last_synced_at         = NOW(),
+    last_status            = EXCLUDED.last_status,
+    academic_year          = EXCLUDED.academic_year,
+    semester               = EXCLUDED.semester,
+    entry_count            = EXCLUDED.entry_count,
+    course_count           = EXCLUDED.course_count,
+    unmatched_course_count = EXCLUDED.unmatched_course_count,
+    unmatched_course_codes = EXCLUDED.unmatched_course_codes;
 
-  RETURN jsonb_build_object('courses', course_total, 'entries', entry_total);
+  RETURN jsonb_build_object(
+    'courses', course_total,
+    'entries', entry_total,
+    'retired', retired_total,
+    'unmatched', unmatched_total,
+    'status', computed_status,
+    'schedule_replaced', v_schedule_ok,
+    'enrollments_reconciled', v_enrollments_ok
+  );
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
 
-REVOKE EXECUTE ON FUNCTION public.sync_student_academics(UUID, TEXT, TEXT, JSONB, JSONB) FROM anon, authenticated;
+REVOKE EXECUTE ON FUNCTION public.sync_student_academics(UUID, TEXT, TEXT, JSONB, JSONB, BOOLEAN, BOOLEAN) FROM anon, authenticated;
 
 -- ═══════════════════════════════════════════════════════════════════════════
 -- 3. RESOURCES — doctor-published materials + unified view

@@ -111,8 +111,22 @@ Deno.serve(async (request) => {
 
     const identity = parseIdentity(verifyPayload);
     const academicYear = identity.academicYear ?? currentAcademicYear();
+    // The freshly-verified university identity wins over whatever the client
+    // suggested. This used to be the other way around (client hint checked
+    // first), which was harmless when the client always sourced its hint
+    // from a live re-render of the student's own profile — but see the
+    // profile-write comment below: profiles.semester now deliberately stops
+    // tracking the university once first set, specifically to stop a routine
+    // sync from silently revoking a student's in-progress assignments. If
+    // the client kept forwarding that now-frozen value and it were allowed
+    // to win here, every *future* sync would keep re-requesting the
+    // student's FIRST-EVER semester forever, defeating the sync entirely.
+    // identity.semester has no such staleness problem — it is re-verified on
+    // every call — so it must take priority. The client hint survives only
+    // as a last-resort fallback for the rare response that omits semester
+    // entirely.
     const semester: Semester =
-      normaliseSemester(payload.semester) ?? identity.semester ?? "LS1";
+      identity.semester ?? normaliseSemester(payload.semester) ?? "LS1";
 
     const [schedulePayload, coursesPayload] = await Promise.all([
       callUniversity("schedule", {
@@ -123,6 +137,20 @@ Deno.serve(async (request) => {
       }),
       callUniversity("courses", { email, file_number: fileNumber }),
     ]);
+
+    // Business-logic audit fix (defects #1 and #3): computed from the RAW
+    // response shape, before parseSchedule()/parseEnrollments() below
+    // collapse "the key is missing" and "the key is a genuinely empty array"
+    // into the identical `[]`. An `entries`/`courses` array being PRESENT —
+    // even empty — means the university positively answered ("you have zero
+    // sessions this week"); the key being absent or non-array means the
+    // response was reshaped or broken (outage, maintenance window, contract
+    // change) and must not be trusted to replace or retire anything. This is
+    // exactly the distinction sync_student_academics() cannot recover once
+    // it only sees the parsed, already-collapsed arrays — see its parameter
+    // comment in migration 009.
+    const scheduleAuthoritative = Array.isArray(schedulePayload.entries);
+    const enrollmentsAuthoritative = Array.isArray(coursesPayload.courses);
 
     const entries = parseSchedule(schedulePayload);
     const enrollments = parseEnrollments(coursesPayload, semester, academicYear);
@@ -137,6 +165,8 @@ Deno.serve(async (request) => {
       p_semester: semester,
       p_enrollments: enrollments,
       p_schedule: entries,
+      p_schedule_authoritative: scheduleAuthoritative,
+      p_enrollments_authoritative: enrollmentsAuthoritative,
     });
 
     if (syncError) {
@@ -144,17 +174,64 @@ Deno.serve(async (request) => {
       return json({ error: "Could not save your academic data. Try again." }, 500);
     }
 
-    // Keep the profile in step with what the university reports.
-    if (identity.major || identity.semester || identity.track || identity.fullName) {
-      await admin
-        .from("profiles")
-        .update({
-          ...(identity.fullName ? { full_name: identity.fullName } : {}),
-          ...(identity.major ? { major: identity.major } : {}),
-          ...(identity.semester ? { semester: identity.semester } : {}),
-          ...(identity.track ? { track: identity.track } : {}),
-        })
-        .eq("id", user.id);
+    // Business-logic audit fix (defect #5): profiles.major/semester/track
+    // feed migration 008's assignment_visible_to_current_student(), which
+    // matches published assignments against exactly those three fields.
+    // Overwriting them on every sync — as this used to do unconditionally —
+    // meant a routine semester rollover (or any transient/incorrect value
+    // from the university) could silently make an assignment a student was
+    // mid-submission-on disappear from their own view, with no error and no
+    // warning.
+    //
+    // Trade-off, stated plainly: "profile always mirrors the university" is
+    // in real tension with "a student never loses access to work already
+    // assigned to them". We choose the student's in-progress work: each of
+    // these three fields is written only the FIRST time it is learned (the
+    // stored value is currently null); once populated, this Edge Function
+    // never overwrites it again. full_name has no such coupling to
+    // assignment visibility and keeps updating every sync as before.
+    //
+    // This is a stopgap, not the durable fix, and it has a real cost of its
+    // own: a student who is legitimately promoted to a new semester will NOT
+    // have profiles.semester follow them here after the first sync, so they
+    // will not automatically see assignments newly targeted at their real
+    // current semester either — until an admin corrects the profile by hand.
+    // That is a visible, correctable failure (staff can fix a wrong field);
+    // silently vanishing in-progress work was not. The durable fix is to
+    // decouple assignment visibility from live mutable profile state
+    // entirely — e.g. snapshot eligibility at publish time, or grandfather
+    // access once granted — inside migration 008's
+    // assignment_visible_to_current_student(). That migration is already
+    // APPLIED, so this belongs in a NEW migration, not an edit to 008 in
+    // place, and it is NOT implemented here — it is out of this change's
+    // scope (supabase/migrations/009, this file, src/pages/Schedule.tsx,
+    // src/services/academics.ts only). Flagging it loudly rather than
+    // quietly deciding it myself.
+    const { data: existingProfile } = await admin
+      .from("profiles")
+      .select("major, semester, track")
+      .eq("id", user.id)
+      .maybeSingle();
+
+    const profilePatch: Record<string, string> = {};
+    if (identity.fullName) profilePatch.full_name = identity.fullName;
+    if (identity.major && !existingProfile?.major) profilePatch.major = identity.major;
+    if (identity.semester && !existingProfile?.semester) profilePatch.semester = identity.semester;
+    if (identity.track && !existingProfile?.track) profilePatch.track = identity.track;
+
+    // Field names only — never the value, never the file number, never the
+    // raw university payload — so ops can see that the university reported
+    // a change we intentionally did not apply, without persisting anything
+    // sensitive.
+    const lockedFields = (["major", "semester", "track"] as const).filter(
+      (field) => identity[field] && existingProfile?.[field] && identity[field] !== existingProfile[field],
+    );
+    if (lockedFields.length > 0) {
+      console.info("university_sync_profile_fields_locked", { fields: lockedFields });
+    }
+
+    if (Object.keys(profilePatch).length > 0) {
+      await admin.from("profiles").update(profilePatch).eq("id", user.id);
     }
 
     // Counts only — never the file number, never the university payload.

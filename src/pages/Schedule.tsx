@@ -8,12 +8,16 @@ import { track } from "@/lib/telemetry";
 import {
   courseTitle,
   durationMinutes,
+  filterEntriesByTerm,
   formatTime,
   getSchedule,
   getSyncState,
   groupByDay,
+  listScheduleTerms,
   syncAcademics,
+  termKey,
   type ScheduleEntryWithCourse,
+  type ScheduleTerm,
 } from "@/services/academics";
 import type { AcademicSyncState } from "@/types/database";
 import { cn } from "@/lib/utils";
@@ -41,12 +45,20 @@ export default function Schedule() {
   const { language } = useAppStore();
   const isFr = language === "fr";
 
-  const [entries, setEntries] = useState<ScheduleEntryWithCourse[]>([]);
+  // Every term the student has ever synced — schedule_entries only ever
+  // replaces the ONE (academic_year, semester) a sync targets, so older
+  // terms accumulate rather than disappear. Kept in full so the term
+  // switcher below has something to switch between; `entries` (derived)
+  // is what actually renders.
+  const [allEntries, setAllEntries] = useState<ScheduleEntryWithCourse[]>([]);
   const [syncState, setSyncState] = useState<AcademicSyncState | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSyncing, setIsSyncing] = useState(false);
   const [showSyncDialog, setShowSyncDialog] = useState(false);
   const [fileNumber, setFileNumber] = useState("");
+  // Explicit user pick from the term switcher. `null` means "auto-follow the
+  // most recently synced term" — see `selectedTerm` below.
+  const [manualTerm, setManualTerm] = useState<ScheduleTerm | null>(null);
 
   const load = useCallback(async () => {
     if (!user) return;
@@ -55,7 +67,7 @@ export default function Schedule() {
       getSchedule(user.id),
       getSyncState(user.id),
     ]);
-    setEntries(scheduleData);
+    setAllEntries(scheduleData);
     setSyncState(state);
     setIsLoading(false);
   }, [user]);
@@ -64,6 +76,28 @@ export default function Schedule() {
     void load();
     track("schedule_viewed");
   }, [load]);
+
+  // Most-recently-synced term first — see listScheduleTerms()'s doc comment
+  // for why this is keyed off synced_at rather than profiles.semester.
+  const terms = useMemo(() => listScheduleTerms(allEntries), [allEntries]);
+
+  // Pure derivation, not state-plus-effect: computed synchronously in the
+  // same render pass as `terms`, so there is never a frame where the
+  // now-fixed "every term stacked" view flashes before a default is chosen.
+  // Falls back to auto-follow (terms[0]) whenever there's no manual pick, or
+  // the manual pick no longer exists among the available terms.
+  const selectedTerm = useMemo<ScheduleTerm | null>(() => {
+    if (manualTerm && terms.some((term) => termKey(term) === termKey(manualTerm))) {
+      return manualTerm;
+    }
+    return terms[0] ?? null;
+  }, [manualTerm, terms]);
+
+  // What actually renders: exactly one term.
+  const entries = useMemo(
+    () => filterEntriesByTerm(allEntries, selectedTerm),
+    [allEntries, selectedTerm],
+  );
 
   const byDay = useMemo(() => groupByDay(entries), [entries]);
   // Weekends only earn a column when something is actually scheduled there.
@@ -109,6 +143,11 @@ export default function Schedule() {
       entries: data?.entries ?? 0,
       courses: data?.courses ?? 0,
     });
+    // A fresh sync should jump to whatever term it just synced, even if the
+    // student had manually switched to an older one beforehand — the newly
+    // synced term becomes the most recent by synced_at, so clearing the
+    // manual override is enough to land on it via the auto-follow default.
+    setManualTerm(null);
     void load();
   }
 
@@ -150,6 +189,39 @@ export default function Schedule() {
         </button>
       </motion.header>
 
+      {/* ── Term switcher ────────────────────────────────────────────────── */}
+      {/* Only shown once there is more than one term to choose between — a
+          student with a single synced term never sees a control with
+          nothing to switch to. */}
+      {!isLoading && terms.length > 1 && (
+        <div
+          role="tablist"
+          aria-label={isFr ? "Semestres synchronisés" : "Synced terms"}
+          className="flex flex-wrap items-center gap-2"
+        >
+          {terms.map((term) => {
+            const isActive = selectedTerm !== null && termKey(term) === termKey(selectedTerm);
+            return (
+              <button
+                key={termKey(term)}
+                type="button"
+                role="tab"
+                aria-selected={isActive}
+                onClick={() => setManualTerm(term)}
+                className={cn(
+                  "px-3 py-1.5 rounded-lg text-xs font-display font-semibold transition-colors",
+                  isActive
+                    ? "bg-gradient-red text-white"
+                    : "surface-interactive text-muted-foreground hover:text-foreground",
+                )}
+              >
+                {term.semester} · {term.academicYear}
+              </button>
+            );
+          })}
+        </div>
+      )}
+
       {/* ── Summary ──────────────────────────────────────────────────────── */}
       {!isLoading && entries.length > 0 && (
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
@@ -164,7 +236,7 @@ export default function Schedule() {
           />
           <SummaryTile
             label={isFr ? "Semestre" : "Semester"}
-            value={profile?.semester ?? "—"}
+            value={selectedTerm?.semester ?? profile?.semester ?? "—"}
           />
         </div>
       )}
