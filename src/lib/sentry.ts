@@ -45,7 +45,20 @@ export function initSentry(): void {
         // Non-negotiable exclusions.
         mask: ['[data-sensitive="true"]'],
         block: [".sentry-block"],
-        ignore: ['input[type="password"]', 'input[name="token"]', 'input[name="otp"]'],
+        // Defence in depth. `mask` above already covers anything correctly
+        // tagged, but an attribute is easy to forget on a new input — and that
+        // is exactly how the sign-in file number ended up captured verbatim in
+        // replay for a while. These name-based rules catch the known-sensitive
+        // fields even when the attribute is missing. Adding a new field that
+        // holds a file number, one-time code or token? Add BOTH the attribute
+        // and its name here.
+        ignore: [
+          'input[type="password"]',
+          'input[name="token"]',
+          'input[name="otp"]',
+          'input[name="file_number"]',
+          'input[name="fileNumber"]',
+        ],
       }),
     ],
 

@@ -147,6 +147,18 @@ export default function ImpersonationBanner() {
 
       <span className="font-display font-extrabold truncate max-w-[40vw]">{targetName}</span>
 
+      {/* Says exactly what impersonation does and does not do. Migration 012
+          deliberately keeps RLS on the REAL identity, so only specific submit
+          actions attribute to the target — every page still SHOWS the owner's
+          own data. Without this line the banner implies you are seeing their
+          account, which is how someone ends up acting on their own records
+          believing they are someone else's. */}
+      <span className="hidden md:inline text-white/85">
+        {isFr
+          ? "— les envois sont attribués à cette personne ; l'écran affiche toujours VOTRE compte"
+          : "— submissions attribute to them; the screen still shows YOUR account"}
+      </span>
+
       <span className="tabular-nums font-mono text-white/85">
         {isFr ? "expire dans " : "expires in "}
         {countdown}

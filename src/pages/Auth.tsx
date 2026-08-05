@@ -344,7 +344,25 @@ export default function Auth() {
                     <span className="text-xs font-display font-bold uppercase tracking-[0.14em] text-muted-foreground mb-2 block">File number</span>
                     <div className="relative">
                       <FileKey2 className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                      <input value={fileNumber} onChange={(event) => setFileNumber(event.target.value)} placeholder="Your university file number" required minLength={4} maxLength={40} className={inputClass} />
+                      {/* data-sensitive is load-bearing, not decoration: Sentry
+                          Session Replay runs with maskAllInputs:false, and
+                          src/lib/sentry.ts masks only `[data-sensitive="true"]`.
+                          Without it the file number — the one value the product
+                          promises is never sent to Sentry — is captured verbatim
+                          in replay. beforeSend does not help; it scrubs error
+                          messages and URLs, not replay DOM. */}
+                      <input
+                        name="file_number"
+                        data-sensitive="true"
+                        autoComplete="off"
+                        value={fileNumber}
+                        onChange={(event) => setFileNumber(event.target.value)}
+                        placeholder="Your university file number"
+                        required
+                        minLength={4}
+                        maxLength={40}
+                        className={inputClass}
+                      />
                     </div>
                   </label>
                   <button type="submit" disabled={isLoading} className="w-full py-3.5 rounded-2xl bg-gradient-red text-white font-display font-bold flex items-center justify-center gap-2 transition hover:brightness-110 disabled:opacity-50 shadow-lg shadow-red-600/20">

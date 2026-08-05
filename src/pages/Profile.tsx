@@ -18,6 +18,7 @@ import {
   BookOpen,
   FileText,
 } from "lucide-react";
+import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 import { useAppStore } from "@/store/appStore";
 import { supabase } from "@/lib/supabase";
@@ -87,6 +88,24 @@ export default function Profile() {
 
   async function handleDeleteAccount() {
     if (deleteConfirm !== "DELETE" || !user) return;
+
+    // Impersonation deliberately does NOT redirect reads (migration 012 keeps
+    // RLS on the real identity), so this page still shows — and this button
+    // still deletes — the SIGNED-IN owner's own profile, not the impersonated
+    // target's. With a banner overhead saying "Acting as <someone else>", that
+    // is a trap: you would be one confirmation away from deleting your own
+    // account while believing you were acting as another user. Refuse outright
+    // rather than rely on the operator noticing.
+    const { data: session } = await supabase.rpc("current_impersonation");
+    if (session) {
+      toast.error(
+        isFr
+          ? "Arrêtez l'usurpation avant de supprimer un compte. Cette action porterait sur VOTRE compte, pas sur celui que vous incarnez."
+          : "Stop impersonating before deleting an account. This would delete YOUR account, not the one you are acting as.",
+      );
+      return;
+    }
+
     setDeleting(true);
     try {
       // Delete profile (cascades favorites, cart, registrations via RLS)
