@@ -217,7 +217,8 @@ CREATE TABLE public.academic_sync_state (
   -- fix in sync_student_academics() below — may deliberately stop tracking
   -- the university once set.
   academic_year  TEXT,
-  semester       TEXT,
+  semester       TEXT
+    CHECK (semester IS NULL OR semester IN ('LS1','LS2','LS3','LS4','LS5','LS6','LS7','LS8','LS9')),
   entry_count    INTEGER NOT NULL DEFAULT 0,
   course_count   INTEGER NOT NULL DEFAULT 0,
   -- Enrolment course codes the university fed us that did not resolve to a
