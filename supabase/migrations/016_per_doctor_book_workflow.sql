@@ -244,7 +244,7 @@ $$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
 -- has confirmed the council proposal, or whose private replacement council
 -- has confirmed. This replaces 014's global-book confirmation test.
 CREATE OR REPLACE FUNCTION public.select_course_book(
-  p_doctor_course_id UUID,
+  p_doctor_courses_id UUID,
   p_book_id UUID
 )
 RETURNS public.doctor_courses AS $$
@@ -256,7 +256,7 @@ BEGIN
   IF NOT public.is_doctor() OR NOT public.is_target_role(v_actor, 'doctor') THEN
     RAISE EXCEPTION 'Only the assigned doctor may select a course book';
   END IF;
-  SELECT * INTO v_assignment FROM public.doctor_courses WHERE id = p_doctor_course_id AND doctor_id = v_actor AND is_active FOR UPDATE;
+  SELECT * INTO v_assignment FROM public.doctor_courses WHERE id = p_doctor_courses_id AND doctor_id = v_actor AND is_active FOR UPDATE;
   SELECT * INTO v_book FROM public.course_books WHERE id = p_book_id;
   IF v_assignment.id IS NULL OR v_book.id IS NULL OR v_assignment.course_id <> v_book.course_id
      OR (v_book.restricted_to_doctor_id IS NOT NULL AND v_book.restricted_to_doctor_id <> v_actor)

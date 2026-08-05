@@ -39,8 +39,11 @@ DROP POLICY IF EXISTS "book_covers_admin_upload"  ON storage.objects;
 DROP POLICY IF EXISTS "book_covers_admin_update"  ON storage.objects;
 DROP POLICY IF EXISTS "book_covers_admin_delete"  ON storage.objects;
 
-DELETE FROM storage.objects WHERE bucket_id = 'book-covers';
-DELETE FROM storage.buckets WHERE id = 'book-covers';
+-- Storage object and bucket deletion must go through the Supabase Storage API.
+-- Direct writes to storage.objects are rejected by Supabase's protection
+-- trigger. Remove any `book-covers` objects and then the bucket through the
+-- Storage API as part of deployment cleanup; this schema migration only
+-- removes the database policies that supported the retired bookstore.
 
 -- ── Dashboard RPCs ─────────────────────────────────────────────────────────
 -- Both counted books and orders. Their return signatures change, so they must

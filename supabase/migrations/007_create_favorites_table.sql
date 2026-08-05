@@ -17,7 +17,8 @@ CREATE TABLE IF NOT EXISTS public.favorites (
 
 COMMENT ON TABLE public.favorites IS 'User favorites for exams, books, and events.';
 
-CREATE TRIGGER IF NOT EXISTS set_favorites_updated_at
+DROP TRIGGER IF EXISTS set_favorites_updated_at ON public.favorites;
+CREATE TRIGGER set_favorites_updated_at
   BEFORE UPDATE ON public.favorites
   FOR EACH ROW EXECUTE FUNCTION public.handle_updated_at();
 
@@ -30,27 +31,32 @@ CREATE INDEX IF NOT EXISTS idx_favorites_user_item ON public.favorites(user_id, 
 ALTER TABLE public.favorites ENABLE ROW LEVEL SECURITY;
 
 -- Users can read their own favorites
-CREATE POLICY IF NOT EXISTS "favorites_select_own"
+DROP POLICY IF EXISTS "favorites_select_own" ON public.favorites;
+CREATE POLICY "favorites_select_own"
   ON public.favorites FOR SELECT
   USING (auth.uid() = user_id);
 
 -- Admins can read all favorites
-CREATE POLICY IF NOT EXISTS "favorites_select_admin"
+DROP POLICY IF EXISTS "favorites_select_admin" ON public.favorites;
+CREATE POLICY "favorites_select_admin"
   ON public.favorites FOR SELECT
   USING (public.is_admin());
 
 -- Users can insert their own favorites
-CREATE POLICY IF NOT EXISTS "favorites_insert_own"
+DROP POLICY IF EXISTS "favorites_insert_own" ON public.favorites;
+CREATE POLICY "favorites_insert_own"
   ON public.favorites FOR INSERT
   WITH CHECK (auth.uid() = user_id);
 
 -- Users can delete their own favorites
-CREATE POLICY IF NOT EXISTS "favorites_delete_own"
+DROP POLICY IF EXISTS "favorites_delete_own" ON public.favorites;
+CREATE POLICY "favorites_delete_own"
   ON public.favorites FOR DELETE
   USING (auth.uid() = user_id);
 
 -- Admins can delete any favorite
-CREATE POLICY IF NOT EXISTS "favorites_delete_admin"
+DROP POLICY IF EXISTS "favorites_delete_admin" ON public.favorites;
+CREATE POLICY "favorites_delete_admin"
   ON public.favorites FOR DELETE
   USING (public.is_admin());
 

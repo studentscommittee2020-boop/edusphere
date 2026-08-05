@@ -24,7 +24,22 @@ import {
 } from "@/services/studentAuth";
 import { useAppStore } from "@/store/appStore";
 
-type AuthMode = "student" | "verify" | "staff" | "forgot" | "staffOtp" | "staffOtpVerify";
+type AuthMode = "student" | "verify" | "staff" | "forgot" | "staffOtp" | "staffOtpVerify" | "review";
+
+type ReviewAccount = {
+  label: string;
+  email: string;
+  description: string;
+};
+
+const mockReviewEnabled = import.meta.env.VITE_MOCK_REVIEW_MODE === "true";
+
+const reviewAccounts: ReviewAccount[] = [
+  { label: "Mock owner", email: "review-owner@edusphere.local", description: "Full owner console and audit access" },
+  { label: "Admin reviewer", email: "review-admin@edusphere.local", description: "Platform administration and review oversight" },
+  { label: "Student council", email: "review-committee@edusphere.local", description: "Council book upload and replacement review" },
+  { label: "Dr. Review", email: "review-doctor@edusphere.local", description: "Assigned course-book confirmation or replacement" },
+];
 
 const inputClass =
   "w-full pl-11 pr-4 py-3.5 bg-input border border-border rounded-2xl text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:ring-2 focus:ring-red-500/40 focus:border-red-500/60 transition-all";
@@ -234,6 +249,7 @@ export default function Auth() {
     forgot: "Reset staff password",
     staffOtp: t(language, "Code de connexion", "Email code sign-in"),
     staffOtpVerify: t(language, "Entrez votre code", "Enter your code"),
+    review: "Dean review access",
   }[mode];
 
   const description = {
@@ -247,6 +263,7 @@ export default function Auth() {
       "For staff who already have an account. We'll email you a one-time code instead of a password.",
     ),
     staffOtpVerify: t(language, `Nous avons envoyé un code à ${email}.`, `We sent a code to ${email}.`),
+    review: "Choose a prepared review account. Its email is filled in for you; enter the temporary review password on the next screen.",
   }[mode];
 
   return (
@@ -484,15 +501,52 @@ export default function Auth() {
                   <button type="button" onClick={() => setMode("staff")} className="w-full text-sm text-muted-foreground hover:text-foreground">Back to staff sign in</button>
                 </form>
               )}
+
+              {mode === "review" && (
+                <div className="space-y-3">
+                  {reviewAccounts.map((account) => (
+                    <button
+                      key={account.email}
+                      type="button"
+                      onClick={() => {
+                        setEmail(account.email);
+                        setPassword("");
+                        setMode("staff");
+                      }}
+                      className="w-full rounded-2xl border border-border bg-white/[0.03] px-4 py-4 text-left transition hover:border-red-400/60 hover:bg-red-500/[0.08] focus:outline-none focus:ring-2 focus:ring-red-500/40"
+                    >
+                      <span className="flex items-center justify-between gap-4">
+                        <span>
+                          <span className="block font-display font-bold text-foreground">{account.label}</span>
+                          <span className="mt-1 block text-xs leading-5 text-muted-foreground">{account.description}</span>
+                        </span>
+                        <ArrowRight className="h-4 w-4 shrink-0 text-red-300" />
+                      </span>
+                    </button>
+                  ))}
+                  <button
+                    type="button"
+                    onClick={() => setMode("staff")}
+                    className="w-full pt-2 text-sm text-muted-foreground hover:text-foreground"
+                  >
+                    Back to standard staff sign in
+                  </button>
+                </div>
+              )}
             </motion.div>
           </AnimatePresence>
 
           {mode !== "verify" && mode !== "staffOtpVerify" && (
             <div className="mt-8 pt-6 border-t border-border text-center text-sm text-muted-foreground">
-              {mode === "staff" || mode === "forgot" || mode === "staffOtp" ? (
+              {mode === "staff" || mode === "forgot" || mode === "staffOtp" || mode === "review" ? (
                 <button onClick={() => setMode("student")} className="text-red-300 hover:text-red-200">Student sign in</button>
               ) : (
-                <button onClick={() => setMode("staff")} className="text-muted-foreground hover:text-foreground">Staff member? Sign in here</button>
+                <div className="space-y-3">
+                  <button onClick={() => setMode("staff")} className="block w-full text-muted-foreground hover:text-foreground">Staff member? Sign in here</button>
+                  {mockReviewEnabled && (
+                    <button onClick={() => setMode("review")} className="text-red-300 hover:text-red-200">Dean review access</button>
+                  )}
+                </div>
               )}
             </div>
           )}
