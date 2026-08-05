@@ -32,7 +32,10 @@ type ReviewAccount = {
   description: string;
 };
 
-const mockReviewEnabled = import.meta.env.VITE_MOCK_REVIEW_MODE === "true";
+// Temporary internal review access: this only reveals the role selector. Each
+// account still signs in through Supabase with its password and receives its
+// normal server-enforced permissions. Remove after the dean review.
+const mockReviewEnabled = true;
 
 const reviewAccounts: ReviewAccount[] = [
   { label: "Mock owner", email: "review-owner@edusphere.local", description: "Full owner console and audit access" },
