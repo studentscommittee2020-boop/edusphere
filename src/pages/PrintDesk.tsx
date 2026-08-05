@@ -36,6 +36,7 @@ import type { ExamReportProblemType, ExamReportStatus } from "@/services/reports
 import type { Course, ExamType, PrintDocument, Track } from "@/types/database";
 import { EXAM_TYPES, TRACKS } from "@/types/database";
 import { cn } from "@/lib/utils";
+import CouncilCourseBooksPanel from "@/components/CouncilCourseBooksPanel";
 
 // ── Constants ────────────────────────────────────────────────────────────────
 
@@ -331,6 +332,10 @@ export default function PrintDesk() {
             {isFr ? "Actualiser" : "Refresh"}
           </button>
         </motion.header>
+
+        <div className="mt-6">
+          <CouncilCourseBooksPanel />
+        </div>
 
         <div
           role="tablist"

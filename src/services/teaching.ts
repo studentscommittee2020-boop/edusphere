@@ -35,6 +35,9 @@ export interface DoctorCourse {
   course_id: string;
   academic_year: string;
   semester: Semester;
+  selected_book_id: string | null;
+  is_active: boolean;
+  schedule_synced_at: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -114,6 +117,7 @@ export async function getDoctorCourses(doctorId: string) {
     .from("doctor_courses")
     .select("*, courses(*)")
     .eq("doctor_id", doctorId)
+    .eq("is_active", true)
     .order("academic_year", { ascending: false })
     .order("semester", { ascending: true });
 

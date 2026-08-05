@@ -12,7 +12,6 @@ import {
   NotebookPen,
   Printer,
   Send,
-  Settings2,
   Trash2,
   UploadCloud,
 } from "lucide-react";
@@ -44,7 +43,7 @@ import {
   type ExamSubmission,
   type ExamSubmissionStatus,
 } from "@/services/teaching";
-import DoctorCourseSetup from "@/components/DoctorCourseSetup";
+import DoctorBookReviewPanel from "@/components/DoctorBookReviewPanel";
 import type { Assignment, Course, CourseMaterial, ExamType, PrintDocument, Track } from "@/types/database";
 
 const inputClass =
@@ -101,7 +100,6 @@ export default function DoctorWorkspace() {
   // course picker below to only the courses this doctor actually teaches.
   const [teachingAssignments, setTeachingAssignments] = useState<DoctorCourseWithCourse[]>([]);
   const [isLoadingWorkspace, setIsLoadingWorkspace] = useState(true);
-  const [showCourseSetup, setShowCourseSetup] = useState(false);
 
   // Exam submissions — doctor -> student council review queue. Never
   // visible to students until the council approves it.
@@ -286,31 +284,7 @@ export default function DoctorWorkspace() {
       {/* Blocking first-login gate — no doctor_courses rows yet. Rendered
           over the workspace (still mounted underneath) rather than instead
           of it, so the moment it's satisfied the rest is already loaded. */}
-      {profile && teachingAssignments.length === 0 && (
-        <DoctorCourseSetup
-          doctorId={doctorId}
-          language={language}
-          mode="gate"
-          existing={[]}
-          onSaved={() => void load()}
-        />
-      )}
-
       {/* Re-openable edit — "Edit teaching courses" affordance below. */}
-      {profile && showCourseSetup && (
-        <DoctorCourseSetup
-          doctorId={doctorId}
-          language={language}
-          mode="edit"
-          existing={teachingAssignments}
-          onSaved={() => {
-            setShowCourseSetup(false);
-            void load();
-          }}
-          onClose={() => setShowCourseSetup(false)}
-        />
-      )}
-
       <main className="relative max-w-7xl mx-auto px-4 sm:px-6 py-8 sm:py-10 space-y-7">
         <motion.header
           initial={{ opacity: 0, y: 15 }}
@@ -366,15 +340,12 @@ export default function DoctorWorkspace() {
                 : taughtCourses.map((course) => courseTitle(course)).join(" · ")}
             </p>
           </div>
-          <button
-            type="button"
-            onClick={() => setShowCourseSetup(true)}
-            className="shrink-0 inline-flex items-center gap-2 px-3.5 py-2 rounded-lg surface-interactive text-xs font-display font-semibold text-foreground"
-          >
-            <Settings2 className="w-3.5 h-3.5" />
-            {isFr ? "Modifier les cours enseignés" : "Edit teaching courses"}
-          </button>
+          <p className="shrink-0 text-[11px] text-muted-foreground max-w-48 text-right">
+            {isFr ? "Attribués par l’emploi du temps universitaire." : "Assigned from the university schedule."}
+          </p>
         </motion.section>
+
+        <DoctorBookReviewPanel doctorId={doctorId} assignments={teachingAssignments} />
 
         <div className="grid xl:grid-cols-2 gap-6">
           {/* ── Print request ──────────────────────────────────────────────

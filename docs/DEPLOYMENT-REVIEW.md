@@ -117,7 +117,7 @@ Two outcomes:
 
 **Strongly recommended pre-flight check** — dry-run the whole pending batch
 against a disposable database before touching the client's real project,
-since `009`–`014`+ have never been executed even once:
+since `009`–`016`+ have never been executed even once:
 
 ```bash
 supabase start          # local Supabase via Docker, or use a Supabase Cloud "branch"
@@ -324,8 +324,9 @@ unless you specifically want error tracking on this temporary deployment.
 
 ## 6. Edge Function secrets and deployment
 
-Four Edge Functions exist in `supabase/functions/`: `student-otp`,
-`university-sync`, `exam-download`, `approve-exam-submission`. Secrets are
+Five Edge Functions exist in `supabase/functions/`: `student-otp`,
+`university-sync`, `exam-download`, `approve-exam-submission`, and
+`course-book-upload`. Secrets are
 set **per project**, not per function — one `supabase secrets set` call
 makes a value available to every deployed function via `Deno.env.get()`.
 `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` (and `SUPABASE_ANON_KEY`) are
@@ -341,6 +342,7 @@ supabase functions deploy student-otp
 supabase functions deploy university-sync
 supabase functions deploy exam-download
 supabase functions deploy approve-exam-submission
+supabase functions deploy course-book-upload
 ```
 
 **Verified from the actual source of each function** (names matter — a
@@ -361,6 +363,12 @@ mismatch here silently no-ops the function instead of erroring loudly):
   auto-injected values. **Its own header comment states it has never been
   deployed or executed even once** — see step 7, this is the single most
   likely thing in this launch to fail on first real use.
+- **`course-book-upload`** needs only `APP_ORIGIN` beyond the auto-injected
+  Supabase values. It is the sole browser-facing write path for the private
+  `course-books` bucket: it validates the caller, a 150 MB size limit and the
+  file signature before invoking the per-doctor review workflow. Deploy it
+  immediately after migration `016_per_doctor_book_workflow.sql`; without it,
+  council and doctor book uploads correctly fail closed.
 
 **There is no real university API for this review launch, and there will
 not be one before you run this step.** `mocks/university-api/server.mjs`
