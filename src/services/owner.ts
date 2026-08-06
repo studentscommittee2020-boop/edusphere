@@ -198,7 +198,11 @@ export async function endImpersonation() {
  */
 export async function getCurrentImpersonation() {
   const { data, error } = await supabase.rpc("current_impersonation");
-  return { data: data as ImpersonationSession | null, error };
+  // PostgREST can serialize an empty table-returning RPC as `[]`, even though
+  // the SQL function's intent is "one session or none". Normalize both forms
+  // so callers never mistake an empty array for an active session.
+  const session = Array.isArray(data) ? data[0] ?? null : data;
+  return { data: session as ImpersonationSession | null, error };
 }
 
 /**
@@ -232,6 +236,10 @@ export async function getActiveImpersonation(): Promise<{
 }> {
   const { data: session, error } = await getCurrentImpersonation();
   if (error || !session) return { data: null, error };
+
+  // Defensive guard for legacy or malformed rows: an impersonation session
+  // without a target is not actionable and must never reach the banner.
+  if (!session.target_user_id) return { data: null, error: null };
 
   const { data: targetProfile } = await getImpersonationTargetProfile(session.target_user_id);
   return { data: { session, targetProfile }, error: null };
