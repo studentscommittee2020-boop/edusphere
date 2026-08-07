@@ -214,11 +214,6 @@ export default function Auth() {
   async function handleStudentRequest(event: React.FormEvent) {
     event.preventDefault();
     setIsLoading(true);
-    if (!normalizePhone(phone)) {
-      setIsLoading(false);
-      toast.error("Enter a valid international phone number, for example +96170123456.");
-      return;
-    }
     const { error } = await requestStudentOtp(email, fileNumber);
     setIsLoading(false);
 
@@ -384,7 +379,7 @@ export default function Auth() {
     <div className="min-h-screen bg-background flex items-center justify-center p-4 relative overflow-hidden">
       <div className="absolute inset-0 bg-grid opacity-[0.18] pointer-events-none" />
       <div className="absolute -top-40 left-[10%] w-[540px] h-[540px] bg-red-600/[0.16] rounded-full blur-[130px] pointer-events-none" />
-      <div className="absolute -bottom-40 right-[7%] w-[500px] h-[500px] bg-emerald-500/[0.11] rounded-full blur-[130px] pointer-events-none" />
+      <div className="absolute -bottom-40 right-[7%] w-[500px] h-[500px] bg-green-500/[0.11] rounded-full blur-[130px] pointer-events-none" />
 
       <motion.main
         initial={{ opacity: 0, y: 18 }}
@@ -477,13 +472,6 @@ export default function Auth() {
                     <div className="relative">
                       <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                       <input type="email" value={email} onChange={(event) => setEmail(event.target.value)} placeholder="you@university.edu" required className={inputClass} />
-                    </div>
-                  </label>
-                  <label className="block">
-                    <span className="text-xs font-display font-bold uppercase tracking-[0.14em] text-muted-foreground mb-2 block">Mobile number</span>
-                    <div className="relative">
-                      <Smartphone className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                      <input name="phone" data-sensitive="true" type="tel" inputMode="tel" autoComplete="tel" value={phone} onChange={(event) => setPhone(event.target.value)} placeholder="+961 70 123 456" required className={inputClass} />
                     </div>
                   </label>
                   <label className="block">

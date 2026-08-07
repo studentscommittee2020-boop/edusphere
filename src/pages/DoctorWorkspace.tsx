@@ -22,8 +22,11 @@ import { cn } from "@/lib/utils";
 import {
   createAssignment,
   createPrintDocument,
+  getAssignmentSubmissions,
   getAssignmentsForCurrentUser,
+  getPrivateFileUrl,
   getPrintDocuments,
+  reviewSubmission,
   uploadDoctorPrintDocument,
 } from "@/services/portal";
 import {
@@ -44,7 +47,8 @@ import {
   type ExamSubmissionStatus,
 } from "@/services/teaching";
 import DoctorBookReviewPanel from "@/components/DoctorBookReviewPanel";
-import type { Assignment, Course, CourseMaterial, ExamType, PrintDocument, Track } from "@/types/database";
+import DoctorCourseSetup from "@/components/DoctorCourseSetup";
+import type { Assignment, AssignmentSubmission, Course, CourseMaterial, ExamType, PrintDocument, Track } from "@/types/database";
 
 const inputClass =
   "w-full rounded-xl border border-border bg-input px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:ring-2 focus:ring-red-500/30";
@@ -59,6 +63,22 @@ const EXAM_TYPE_LABELS: Record<ExamType, { fr: string; en: string }> = {
   resit: { fr: "Rattrapage", en: "Resit" },
 };
 
+type ReviewStatus = "graded" | "returned";
+
+interface ReviewDraft {
+  status: ReviewStatus;
+  grade: string;
+  feedback: string;
+}
+
+function defaultReviewDraft(submission: AssignmentSubmission): ReviewDraft {
+  return {
+    status: submission.status === "graded" ? "graded" : "returned",
+    grade: submission.grade?.toString() ?? "",
+    feedback: submission.feedback,
+  };
+}
+
 export default function DoctorWorkspace() {
   const { user, profile } = useAuth();
   // Dev-role preview (src/lib/devAuth.ts) fakes `profile`/`isDoctor` but
@@ -71,16 +91,22 @@ export default function DoctorWorkspace() {
   const isFr = language === "fr";
   const [documents, setDocuments] = useState<PrintDocument[]>([]);
   const [assignments, setAssignments] = useState<Assignment[]>([]);
+  const [assignmentSubmissions, setAssignmentSubmissions] = useState<Record<string, AssignmentSubmission[]>>({});
   const [documentFile, setDocumentFile] = useState<File | null>(null);
   const [documentTitle, setDocumentTitle] = useState("");
   const [copies, setCopies] = useState("1");
   const [notes, setNotes] = useState("");
   const [assignmentTitle, setAssignmentTitle] = useState("");
+  const [assignmentCourseId, setAssignmentCourseId] = useState("");
   const [assignmentDescription, setAssignmentDescription] = useState("");
   const [major, setMajor] = useState("");
   const [semester, setSemester] = useState("");
   const [dueAt, setDueAt] = useState("");
   const [allowLate, setAllowLate] = useState(false);
+  const [reviewDrafts, setReviewDrafts] = useState<Record<string, ReviewDraft>>({});
+  const [reviewingSubmissionId, setReviewingSubmissionId] = useState<string | null>(null);
+  const [openingSubmissionId, setOpeningSubmissionId] = useState<string | null>(null);
+  const [isCourseSetupOpen, setIsCourseSetupOpen] = useState(false);
   const [submitting, setSubmitting] = useState<"document" | "assignment" | "material" | "exam" | null>(
     null,
   );
@@ -120,6 +146,13 @@ export default function DoctorWorkspace() {
     setDocuments(documentResult.data);
     setAssignments(assignmentResult.data);
     setCourses(courseResult.data);
+    const submissionResults = await Promise.all(
+      assignmentResult.data.map(async (assignment) => {
+        const result = await getAssignmentSubmissions(assignment.id);
+        return [assignment.id, result.data] as const;
+      }),
+    );
+    setAssignmentSubmissions(Object.fromEntries(submissionResults));
     if (user) {
       const [materialResult, teachingResult, examSubmissionResult] = await Promise.all([
         getMaterialsForDoctor(user.id),
@@ -149,6 +182,11 @@ export default function DoctorWorkspace() {
     }
     return [...byId.values()];
   }, [teachingAssignments]);
+
+  const doctorAssignments = useMemo(
+    () => assignments.filter((assignment) => assignment.doctor_id === doctorId),
+    [assignments, doctorId],
+  );
 
   async function submitMaterial(event: React.FormEvent) {
     event.preventDefault();
@@ -204,13 +242,51 @@ export default function DoctorWorkspace() {
   async function submitAssignment(event: React.FormEvent) {
     event.preventDefault();
     if (!user || !assignmentTitle.trim()) { toast.error("Add an assignment title."); return; }
+    if (!assignmentCourseId) { toast.error("Select one of your active teaching courses."); return; }
     setSubmitting("assignment");
-    const result = await createAssignment({ doctor_id: user.id, title: assignmentTitle.trim(), description: assignmentDescription.trim(), target_major: major || null, target_semester: semester || null, due_at: dueAt ? new Date(dueAt).toISOString() : null, allow_late: allowLate, published_at: new Date().toISOString() });
+    const result = await createAssignment({ doctor_id: user.id, course_id: assignmentCourseId, title: assignmentTitle.trim(), description: assignmentDescription.trim(), target_major: major || null, target_semester: semester || null, due_at: dueAt ? new Date(dueAt).toISOString() : null, allow_late: allowLate, published_at: new Date().toISOString() });
     setSubmitting(null);
     if (result.error) { toast.error(result.error.message); return; }
     toast.success("Assignment published for matching students.");
-    setAssignmentTitle(""); setAssignmentDescription(""); setMajor(""); setSemester(""); setDueAt(""); setAllowLate(false);
+    setAssignmentTitle(""); setAssignmentCourseId(""); setAssignmentDescription(""); setMajor(""); setSemester(""); setDueAt(""); setAllowLate(false);
     await load();
+  }
+
+  async function submitReview(submission: AssignmentSubmission) {
+    const draft = reviewDrafts[submission.id] ?? defaultReviewDraft(submission);
+    const grade = draft.status === "graded" ? Number(draft.grade) : null;
+    if (draft.status === "graded" && (grade === null || !Number.isFinite(grade) || grade < 0 || grade > 100)) {
+      toast.error("Enter a grade from 0 to 100.");
+      return;
+    }
+
+    setReviewingSubmissionId(submission.id);
+    const { error } = await reviewSubmission(submission.id, {
+      status: draft.status,
+      grade,
+      feedback: draft.feedback.trim(),
+    });
+    setReviewingSubmissionId(null);
+
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    toast.success(draft.status === "graded" ? "Grade shared with the student." : "Submission returned to the student.");
+    await load();
+  }
+
+  async function openSubmittedPdf(submission: AssignmentSubmission) {
+    setOpeningSubmissionId(submission.id);
+    const { url, error } = await getPrivateFileUrl("assignment-submissions", submission.storage_path);
+    setOpeningSubmissionId(null);
+
+    if (error || !url) {
+      toast.error("Could not open this submitted PDF.");
+      return;
+    }
+
+    window.open(url, "_blank", "noopener,noreferrer");
   }
 
   async function submitExam(event: React.FormEvent) {
@@ -285,6 +361,30 @@ export default function DoctorWorkspace() {
           over the workspace (still mounted underneath) rather than instead
           of it, so the moment it's satisfied the rest is already loaded. */}
       {/* Re-openable edit — "Edit teaching courses" affordance below. */}
+      {teachingAssignments.length === 0 && (
+        <DoctorCourseSetup
+          doctorId={doctorId}
+          language={language}
+          mode="gate"
+          existing={[]}
+          onSaved={() => void load()}
+        />
+      )}
+
+      {isCourseSetupOpen && teachingAssignments.length > 0 && (
+        <DoctorCourseSetup
+          doctorId={doctorId}
+          language={language}
+          mode="edit"
+          existing={teachingAssignments}
+          onSaved={() => {
+            setIsCourseSetupOpen(false);
+            void load();
+          }}
+          onClose={() => setIsCourseSetupOpen(false)}
+        />
+      )}
+
       <main className="relative max-w-7xl mx-auto px-4 sm:px-6 py-8 sm:py-10 space-y-7">
         <motion.header
           initial={{ opacity: 0, y: 15 }}
@@ -309,7 +409,7 @@ export default function DoctorWorkspace() {
 
           <div className="relative grid grid-cols-2 gap-3">
             <div className="surface px-4 py-3">
-              <p className="text-xl text-foreground font-display font-extrabold">{assignments.length}</p>
+              <p className="text-xl text-foreground font-display font-extrabold">{doctorAssignments.length}</p>
               <p className="text-xs text-muted-foreground">published</p>
             </div>
             <div className="surface px-4 py-3">
@@ -343,6 +443,13 @@ export default function DoctorWorkspace() {
           <p className="shrink-0 text-[11px] text-muted-foreground max-w-48 text-right">
             {isFr ? "Attribués par l’emploi du temps universitaire." : "Assigned from the university schedule."}
           </p>
+          <button
+            type="button"
+            onClick={() => setIsCourseSetupOpen(true)}
+            className="shrink-0 rounded-lg border border-border px-3 py-2 text-xs font-display font-bold text-foreground transition-colors hover:bg-white/[0.06] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500/50"
+          >
+            {isFr ? "Modifier les cours" : "Edit teaching courses"}
+          </button>
         </motion.section>
 
         <DoctorBookReviewPanel doctorId={doctorId} assignments={teachingAssignments} />
@@ -434,21 +541,40 @@ export default function DoctorWorkspace() {
           {/* ── Assignments ─────────────────────────────────────────────── */}
           <section className="surface p-5 sm:p-6">
             <div className="flex items-center gap-3">
-              <span className="w-10 h-10 rounded-xl bg-emerald-500/10 text-emerald-300 flex items-center justify-center shrink-0">
+              <span className="w-10 h-10 rounded-xl bg-green-500/10 text-green-400 flex items-center justify-center shrink-0">
                 <FilePlus2 className="w-5 h-5" />
               </span>
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2 flex-wrap">
                   <h2 className="font-display font-bold text-lg text-foreground">Publish an assignment</h2>
-                  <span className="px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider bg-emerald-500/10 text-emerald-300">
+                  <span className="px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider bg-green-500/10 text-green-400">
                     Students see this
                   </span>
                 </div>
-                <p className="text-xs text-muted-foreground">Academic filters determine who can see it.</p>
+                <p className="text-xs text-muted-foreground">Choose an active teaching course before publishing.</p>
               </div>
             </div>
 
             <form onSubmit={submitAssignment} className="space-y-4 mt-6">
+              <label className="block">
+                <span className="text-xs text-muted-foreground block mb-2">Active teaching course</span>
+                <select
+                  value={assignmentCourseId}
+                  onChange={(event) => setAssignmentCourseId(event.target.value)}
+                  required
+                  disabled={taughtCourses.length === 0}
+                  className={inputClass}
+                >
+                  <option value="">
+                    {taughtCourses.length === 0 ? "No active teaching courses" : "Select an active teaching course…"}
+                  </option>
+                  {taughtCourses.map((course) => (
+                    <option key={course.id} value={course.id}>
+                      {course.code ? course.code + " · " : ""}{courseTitle(course)} ({course.semester})
+                    </option>
+                  ))}
+                </select>
+              </label>
               <input
                 value={assignmentTitle}
                 onChange={(event) => setAssignmentTitle(event.target.value)}
@@ -500,8 +626,8 @@ export default function DoctorWorkspace() {
               </div>
               <button
                 type="submit"
-                disabled={submitting === "assignment"}
-                className="w-full py-3 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-emerald-950 font-display font-bold text-sm flex items-center justify-center gap-2 disabled:opacity-50"
+                disabled={submitting === "assignment" || taughtCourses.length === 0}
+                className="w-full py-3 rounded-xl bg-green-500 hover:bg-green-400 text-green-950 font-display font-bold text-sm flex items-center justify-center gap-2 disabled:opacity-50"
               >
                 {submitting === "assignment" ? (
                   <Loader2 className="w-4 h-4 animate-spin" />
@@ -515,6 +641,143 @@ export default function DoctorWorkspace() {
             </form>
           </section>
         </div>
+
+        <section className="surface p-5 sm:p-6">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+            <div>
+              <h2 className="font-display font-bold text-lg text-foreground">Student submission inbox</h2>
+              <p className="text-xs text-muted-foreground mt-1">
+                Review your students&apos; work and send their grade or revision feedback directly.
+              </p>
+            </div>
+            <span className="shrink-0 px-2.5 py-1 rounded-full text-[10px] font-display font-bold uppercase tracking-[0.12em] bg-green-500/10 text-green-400">
+              Doctor only
+            </span>
+          </div>
+
+          {doctorAssignments.length === 0 ? (
+            <p className="text-sm text-muted-foreground mt-6">
+              Publish an assignment to receive student submissions here.
+            </p>
+          ) : (
+            <div className="mt-6 space-y-5">
+              {doctorAssignments.map((assignment) => {
+                const submissions = assignmentSubmissions[assignment.id] ?? [];
+                return (
+                  <article key={assignment.id} className="rounded-2xl border border-border bg-surface-0/40 p-4 sm:p-5">
+                    <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+                      <div>
+                        <h3 className="font-display font-bold text-foreground">{assignment.title}</h3>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          {submissions.length} submission{submissions.length === 1 ? "" : "s"} received
+                        </p>
+                      </div>
+                      <span className="text-xs text-muted-foreground">Course-linked assignment</span>
+                    </div>
+
+                    {submissions.length === 0 ? (
+                      <p className="text-sm text-muted-foreground mt-4">No student work has been submitted yet.</p>
+                    ) : (
+                      <div className="mt-4 space-y-3">
+                        {submissions.map((submission) => {
+                          const draft = reviewDrafts[submission.id] ?? defaultReviewDraft(submission);
+                          const isReviewing = reviewingSubmissionId === submission.id;
+                          return (
+                            <form
+                              key={submission.id}
+                              onSubmit={(event) => {
+                                event.preventDefault();
+                                void submitReview(submission);
+                              }}
+                              className="rounded-xl border border-border bg-surface-1/60 p-4"
+                            >
+                              <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                                <div className="min-w-0">
+                                  <p className="text-sm font-medium text-foreground truncate">{submission.original_name}</p>
+                                  <p className="text-xs text-muted-foreground mt-1">
+                                    Attempt {submission.attempt_number} · {new Intl.DateTimeFormat(undefined, { dateStyle: "medium", timeStyle: "short" }).format(new Date(submission.submitted_at))}
+                                  </p>
+                                </div>
+                                <span className="self-start sm:self-auto px-2.5 py-1 rounded-full text-xs capitalize bg-red-500/10 text-red-300">
+                                  {submission.status}
+                                </span>
+                              </div>
+                              {submission.message && (
+                                <p className="text-sm text-muted-foreground mt-3 whitespace-pre-wrap">{submission.message}</p>
+                              )}
+                              <button
+                                type="button"
+                                onClick={() => void openSubmittedPdf(submission)}
+                                disabled={openingSubmissionId === submission.id}
+                                className="mt-3 inline-flex items-center gap-2 rounded-xl border border-border px-4 py-2.5 text-sm font-display font-bold text-foreground transition-colors hover:bg-white/[0.06] disabled:cursor-wait disabled:opacity-50"
+                              >
+                                {openingSubmissionId === submission.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileText className="w-4 h-4" />}
+                                Open submitted PDF
+                              </button>
+                              <div className="grid gap-3 sm:grid-cols-3 mt-4">
+                                <label className="block">
+                                  <span className="text-xs text-muted-foreground block mb-1.5">Decision</span>
+                                  <select
+                                    value={draft.status}
+                                    onChange={(event) => setReviewDrafts((current) => ({
+                                      ...current,
+                                      [submission.id]: { ...draft, status: event.target.value as ReviewStatus },
+                                    }))}
+                                    className={inputClass}
+                                  >
+                                    <option value="graded">Grade and share</option>
+                                    <option value="returned">Return for revision</option>
+                                  </select>
+                                </label>
+                                <label className="block">
+                                  <span className="text-xs text-muted-foreground block mb-1.5">Grade (0–100)</span>
+                                  <input
+                                    type="number"
+                                    min="0"
+                                    max="100"
+                                    step="0.01"
+                                    value={draft.grade}
+                                    disabled={draft.status !== "graded"}
+                                    onChange={(event) => setReviewDrafts((current) => ({
+                                      ...current,
+                                      [submission.id]: { ...draft, grade: event.target.value },
+                                    }))}
+                                    className={inputClass}
+                                  />
+                                </label>
+                                <label className="block">
+                                  <span className="text-xs text-muted-foreground block mb-1.5">Feedback</span>
+                                  <input
+                                    value={draft.feedback}
+                                    maxLength={4000}
+                                    onChange={(event) => setReviewDrafts((current) => ({
+                                      ...current,
+                                      [submission.id]: { ...draft, feedback: event.target.value },
+                                    }))}
+                                    placeholder="Feedback for the student"
+                                    className={inputClass}
+                                  />
+                                </label>
+                              </div>
+                              <button
+                                type="submit"
+                                disabled={isReviewing}
+                                className="mt-3 px-4 py-2.5 rounded-xl bg-gradient-red text-white text-sm font-display font-bold inline-flex items-center gap-2 disabled:opacity-50"
+                              >
+                                {isReviewing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+                                {draft.status === "graded" ? "Save grade" : "Return submission"}
+                              </button>
+                            </form>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </article>
+                );
+              })}
+            </div>
+          )}
+        </section>
 
         {/* ── Course materials ──────────────────────────────────────────────
             Published to the students enrolled in the chosen course. This is the

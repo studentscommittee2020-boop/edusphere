@@ -151,6 +151,7 @@ function RenderGate() {
         invalidate();
       }
     };
+    onVisibility();
     document.addEventListener("visibilitychange", onVisibility);
     return () => document.removeEventListener("visibilitychange", onVisibility);
   }, [invalidate, setFrameloop]);
@@ -189,6 +190,7 @@ export default function HeroScene() {
         }}
       >
         <Canvas
+          aria-hidden="true"
           camera={{ position: [0, 0, 9], fov: 40 }}
           gl={{ alpha: true, antialias: true, powerPreference: "high-performance" }}
           dpr={[1, 1.75]}

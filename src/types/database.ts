@@ -117,7 +117,8 @@ export type Database = {
         Insert: {
           id?: string;
           doctor_id: string;
-          course_id?: string | null;
+          /** New assignments are course-backed; nullable rows are legacy-only. */
+          course_id: string;
           title: string;
           description?: string;
           target_major?: string | null;
@@ -1364,6 +1365,38 @@ export type Database = {
         };
         Returns: Database["public"]["Tables"]["assignment_submissions"]["Row"];
       };
+      require_portal_mfa: {
+        Args: Record<PropertyKey, never>;
+        Returns: undefined;
+      };
+      assignment_visible_to_current_student: {
+        Args: { p_assignment_id: string };
+        Returns: boolean;
+      };
+      transition_print_document: {
+        Args: {
+          p_document_id: string;
+          p_status: "printing" | "ready" | "completed" | "cancelled";
+        };
+        Returns: Database["public"]["Tables"]["print_documents"]["Row"];
+      };
+      review_assignment_submission: {
+        Args: {
+          p_submission_id: string;
+          p_status: "returned" | "graded";
+          p_grade?: number | null;
+          p_feedback?: string;
+        };
+        Returns: Database["public"]["Tables"]["assignment_submissions"]["Row"];
+      };
+      get_assignment_portal_feed: {
+        Args: Record<PropertyKey, never>;
+        Returns: AssignmentPortalFeed[];
+      };
+      authorize_and_log_portal_file_access: {
+        Args: { p_bucket_id: string; p_storage_path: string };
+        Returns: boolean;
+      };
       get_dashboard_stats: {
         Args: Record<PropertyKey, never>;
         Returns: {
@@ -1509,6 +1542,27 @@ export type Favorite = Tables<"favorites">;
 export type PrintDocument = Tables<"print_documents">;
 export type Assignment = Tables<"assignments">;
 export type AssignmentSubmission = Tables<"assignment_submissions">;
+export type AssignmentPortalFeed = {
+  assignment_id: string;
+  doctor_id: string;
+  course_id: string | null;
+  title: string;
+  description: string;
+  target_major: string | null;
+  target_semester: string | null;
+  target_track: string | null;
+  due_at: string | null;
+  allow_late: boolean;
+  max_submissions: number;
+  attachment_path: string | null;
+  attachment_name: string | null;
+  attachment_mime_type: string | null;
+  attachment_size_bytes: number | null;
+  published_at: string | null;
+  created_at: string;
+  updated_at: string;
+  submissions: Json;
+};
 export type AuditLog = Tables<"audit_logs">;
 export type OwnerEmail = Tables<"owner_emails">;
 export type StudentEnrollment = Tables<"student_enrollments">;

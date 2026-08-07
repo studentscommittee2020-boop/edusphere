@@ -1,6 +1,7 @@
-import { supabase } from "@/lib/supabase";
+import { assertWritable, supabase } from "@/lib/supabase";
 
 export async function requestStudentOtp(email: string, fileNumber: string) {
+  assertWritable("request a student sign-in code");
   const { data, error } = await supabase.functions.invoke("student-otp", {
     body: { email: email.trim().toLowerCase(), fileNumber: fileNumber.trim() },
   });

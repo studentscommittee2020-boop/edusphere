@@ -1,6 +1,7 @@
-import { supabase } from "@/lib/supabase";
+import { assertWritable, supabase } from "@/lib/supabase";
 import type {
   Assignment,
+  AssignmentPortalFeed,
   AssignmentSubmission,
   AuditLog,
   PrintDocument,
@@ -25,6 +26,7 @@ function fileExtension(file: File) {
 }
 
 export async function uploadDoctorPrintDocument(userId: string, file: File) {
+  assertWritable("upload a print document");
   const validationError = validatePdf(file);
   if (validationError) return { path: null, error: validationError };
 
@@ -47,6 +49,7 @@ export async function createPrintDocument(document: {
   mime_type: "application/pdf";
   size_bytes: number;
 }) {
+  assertWritable("create a print request");
   const { data, error } = await supabase
     .from("print_documents")
     .insert(document)
@@ -67,17 +70,24 @@ export async function updatePrintDocumentStatus(
   id: string,
   status: PrintDocument["status"],
 ) {
-  const { data, error } = await supabase
-    .from("print_documents")
-    .update({ status })
-    .eq("id", id)
-    .select()
-    .single();
+  if (status === "requested") {
+    return {
+      data: null,
+      error: new Error("A print request cannot transition back to requested."),
+    };
+  }
+
+  assertWritable("update a print request");
+  const { data, error } = await supabase.rpc("transition_print_document", {
+    p_document_id: id,
+    p_status: status,
+  });
   return { data: data as PrintDocument | null, error };
 }
 
 export async function createAssignment(assignment: {
   doctor_id: string;
+  course_id: string;
   title: string;
   description: string;
   target_major?: string | null;
@@ -88,6 +98,7 @@ export async function createAssignment(assignment: {
   max_submissions?: number;
   published_at?: string | null;
 }) {
+  assertWritable("publish an assignment");
   const { data, error } = await supabase
     .from("assignments")
     .insert(assignment)
@@ -96,12 +107,36 @@ export async function createAssignment(assignment: {
   return { data: data as Assignment | null, error };
 }
 
+function assignmentFromFeed(row: AssignmentPortalFeed): Assignment {
+  return {
+    id: row.assignment_id,
+    doctor_id: row.doctor_id,
+    course_id: row.course_id,
+    title: row.title,
+    description: row.description,
+    target_major: row.target_major,
+    target_semester: row.target_semester,
+    target_track: row.target_track as Assignment["target_track"],
+    due_at: row.due_at,
+    allow_late: row.allow_late,
+    max_submissions: row.max_submissions,
+    attachment_path: row.attachment_path,
+    attachment_name: row.attachment_name,
+    attachment_mime_type: row.attachment_mime_type as Assignment["attachment_mime_type"],
+    attachment_size_bytes: row.attachment_size_bytes,
+    published_at: row.published_at,
+    created_at: row.created_at,
+    updated_at: row.updated_at,
+  };
+}
+
+export async function getAssignmentPortalFeed() {
+  return supabase.rpc("get_assignment_portal_feed");
+}
+
 export async function getAssignmentsForCurrentUser() {
-  const { data, error } = await supabase
-    .from("assignments")
-    .select("*")
-    .order("due_at", { ascending: true, nullsFirst: false });
-  return { data: (data ?? []) as Assignment[], error };
+  const { data, error } = await getAssignmentPortalFeed();
+  return { data: (data ?? []).map(assignmentFromFeed), error };
 }
 
 export async function getAssignmentSubmissions(assignmentId: string) {
@@ -119,6 +154,7 @@ export async function uploadAssignmentSubmission(
   file: File,
   message: string,
 ) {
+  assertWritable("upload an assignment submission");
   const validationError = validatePdf(file);
   if (validationError) return { data: null, error: validationError };
 
@@ -138,24 +174,39 @@ export async function uploadAssignmentSubmission(
     p_message: message,
   });
 
+  if (error) {
+    await supabase.storage.from("assignment-submissions").remove([path]);
+  }
+
   return { data: data as AssignmentSubmission | null, error };
 }
 
 export async function reviewSubmission(
   id: string,
   updates: Pick<AssignmentSubmission, "status" | "feedback" | "grade">,
-  reviewerId: string,
 ) {
-  const { data, error } = await supabase
-    .from("assignment_submissions")
-    .update({ ...updates, reviewed_at: new Date().toISOString(), reviewed_by: reviewerId })
-    .eq("id", id)
-    .select()
-    .single();
+  assertWritable("review an assignment submission");
+  const { data, error } = await supabase.rpc("review_assignment_submission", {
+    p_submission_id: id,
+    p_status: updates.status === "graded" ? "graded" : "returned",
+    p_grade: updates.status === "graded" ? updates.grade : null,
+    p_feedback: updates.feedback ?? "",
+  });
   return { data: data as AssignmentSubmission | null, error };
 }
 
 export async function getPrivateFileUrl(bucket: string, path: string) {
+  const { data: authorized, error: authorizationError } = await supabase.rpc(
+    "authorize_and_log_portal_file_access",
+    { p_bucket_id: bucket, p_storage_path: path },
+  );
+  if (authorizationError || authorized !== true) {
+    return {
+      url: null,
+      error: authorizationError ?? new Error("You are not allowed to open this file."),
+    };
+  }
+
   const { data, error } = await supabase.storage.from(bucket).createSignedUrl(path, 60);
   return { url: data?.signedUrl ?? null, error };
 }

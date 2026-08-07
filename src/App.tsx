@@ -107,11 +107,7 @@ export default function App() {
       <Toaster
         position="bottom-right"
         toastOptions={{
-          style: {
-            background: "hsl(0 0% 8%)",
-            color: "hsl(0 0% 95%)",
-            border: "1px solid hsl(0 0% 15%)",
-          },
+          className: "surface edusphere-toast",
         }}
       />
       <Suspense fallback={<PageLoader />}>
