@@ -380,14 +380,8 @@
     background-image: radial-gradient(hsl(var(--foreground) / 0.13) 1px, transparent 1px);
   }
 
-  @media (max-width: 1279px) {
-    .bg-orb-red,
-    .bg-orb-green,
-  .bg-orb-accent {
-      animation: none;
-      filter: blur(64px);
-    }
-  }
+  /* Keep the background alive on every screen size. The motion is deliberately
+     slow and transform-only, so it remains gentle on phones and tablets. */
   :root[data-theme="light"] .bg-orb-red {
     background: radial-gradient(circle, hsl(var(--red-600) / 0.30) 0%, transparent 70%);
   }
