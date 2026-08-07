@@ -1,8 +1,9 @@
 // @ts-nocheck — R3F JSX intrinsic types are incompatible with some Three.js versions
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { useRef, useMemo, useEffect, useState, Suspense, Component, type ReactNode } from "react";
-import { BufferGeometry, BufferAttribute, AdditiveBlending } from "three";
+import { BufferGeometry, BufferAttribute, AdditiveBlending, NormalBlending } from "three";
 import type { Mesh, Points } from "three";
+import { useAppStore } from "@/store/appStore";
 
 /**
  * Ambient background scene.
@@ -34,7 +35,7 @@ class SceneErrorBoundary extends Component<{ children: ReactNode }, { hasError: 
 
 // ── Elements ─────────────────────────────────────────────────────────────────
 
-function SoftOrb({ position, color, speed = 1, scale = 1, opacity = 0.22 }) {
+function SoftOrb({ position, color, speed = 1, scale = 1, opacity = 0.22, blending = AdditiveBlending }) {
   const meshRef = useRef<Mesh>(null);
 
   useFrame((state) => {
@@ -53,7 +54,7 @@ function SoftOrb({ position, color, speed = 1, scale = 1, opacity = 0.22 }) {
         color={color}
         transparent
         opacity={opacity}
-        blending={AdditiveBlending}
+        blending={blending}
         depthWrite={false}
         wireframe
       />
@@ -61,7 +62,7 @@ function SoftOrb({ position, color, speed = 1, scale = 1, opacity = 0.22 }) {
   );
 }
 
-function SoftRing({ position, color, scale = 1, opacity = 0.18 }) {
+function SoftRing({ position, color, scale = 1, opacity = 0.18, blending = AdditiveBlending }) {
   const meshRef = useRef<Mesh>(null);
 
   useFrame((state) => {
@@ -80,14 +81,14 @@ function SoftRing({ position, color, scale = 1, opacity = 0.18 }) {
         color={color}
         transparent
         opacity={opacity}
-        blending={AdditiveBlending}
+        blending={blending}
         depthWrite={false}
       />
     </mesh>
   );
 }
 
-function Particles() {
+function Particles({ blending = AdditiveBlending, opacity = 0.42 }) {
   const points = useRef<Points>(null);
   const count = 260;
 
@@ -129,10 +130,10 @@ function Particles() {
         size={0.035}
         vertexColors
         transparent
-        opacity={0.42}
+        opacity={opacity}
         sizeAttenuation
         depthWrite={false}
-        blending={AdditiveBlending}
+        blending={blending}
       />
     </points>
   );
@@ -163,6 +164,12 @@ function RenderGate() {
 
 export default function HeroScene() {
   const [reducedMotion, setReducedMotion] = useState(false);
+  const theme = useAppStore((state) => state.theme);
+  const isLight = theme === "light";
+  // Additive blending brightens a dark background beautifully but washes out
+  // against white. Normal blending preserves the same moving geometry in light
+  // mode without turning it into invisible white glare.
+  const blending = isLight ? NormalBlending : AdditiveBlending;
 
   useEffect(() => {
     const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
@@ -181,12 +188,12 @@ export default function HeroScene() {
       <div
         className="w-full h-full"
         style={{
-          opacity: 0.5,
+          opacity: isLight ? 0.72 : 0.5,
           // Keeps the centre column — where all the text lives — clear.
           maskImage:
-            "radial-gradient(ellipse 65% 55% at 50% 45%, transparent 0%, black 78%)",
+            "radial-gradient(ellipse 65% 55% at 50% 45%, transparent 0%, black 82%)",
           WebkitMaskImage:
-            "radial-gradient(ellipse 65% 55% at 50% 45%, transparent 0%, black 78%)",
+            "radial-gradient(ellipse 65% 55% at 50% 45%, transparent 0%, black 82%)",
         }}
       >
         <Canvas
@@ -198,13 +205,13 @@ export default function HeroScene() {
         >
           <RenderGate />
           <Suspense fallback={null}>
-            <SoftOrb position={[-6.5, 1.5, -7]} color="#dc2626" speed={0.6} scale={1.6} />
-            <SoftOrb position={[6.8, -1.8, -8]} color="#16a34a" speed={0.4} scale={1.3} />
-            <SoftOrb position={[2.5, 4.2, -10]} color="#ef4444" speed={0.3} scale={0.9} opacity={0.16} />
-            <SoftRing position={[5.5, 2.6, -6]} color="#ef4444" scale={1.1} />
-            <SoftRing position={[-5, -3.2, -6.5]} color="#22c55e" scale={0.85} />
-            <SoftRing position={[-2, 2.4, -11]} color="#f87171" scale={0.6} opacity={0.12} />
-            <Particles />
+            <SoftOrb position={[-6.5, 1.5, -7]} color="#dc2626" speed={0.6} scale={1.6} opacity={isLight ? 0.34 : 0.22} blending={blending} />
+            <SoftOrb position={[6.8, -1.8, -8]} color="#16a34a" speed={0.4} scale={1.3} opacity={isLight ? 0.28 : 0.22} blending={blending} />
+            <SoftOrb position={[2.5, 4.2, -10]} color="#ef4444" speed={0.3} scale={0.9} opacity={isLight ? 0.24 : 0.16} blending={blending} />
+            <SoftRing position={[5.5, 2.6, -6]} color="#ef4444" scale={1.1} opacity={isLight ? 0.3 : 0.18} blending={blending} />
+            <SoftRing position={[-5, -3.2, -6.5]} color="#22c55e" scale={0.85} opacity={isLight ? 0.26 : 0.18} blending={blending} />
+            <SoftRing position={[-2, 2.4, -11]} color="#f87171" scale={0.6} opacity={isLight ? 0.2 : 0.12} blending={blending} />
+            <Particles blending={blending} opacity={isLight ? 0.62 : 0.42} />
           </Suspense>
         </Canvas>
       </div>

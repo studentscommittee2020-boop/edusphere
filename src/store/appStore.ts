@@ -67,7 +67,13 @@ export const useAppStore = create<AppState>()(
       theme: "dark",
       // ── Language ──────────────────────────────────────────────────────────
       setLanguage: (lang) => set({ language: lang }),
-      setTheme: (theme) => set({ theme }),
+      setTheme: (theme) => {
+        // Apply immediately as well as through App's layout effect. This keeps
+        // the toggle responsive even before React paints the next frame.
+        document.documentElement.dataset.theme = theme;
+        document.documentElement.style.colorScheme = theme;
+        set({ theme });
+      },
       // ── Admin CRUD ────────────────────────────────────────────────────────
       addPreviousExam: (exam) =>
         set((s) => ({ previousExams: [...s.previousExams, exam] })),

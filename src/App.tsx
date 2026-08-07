@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect } from "react";
+import { lazy, Suspense, useEffect, useLayoutEffect } from "react";
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { Toaster } from "sonner";
 import Layout from "./components/Layout";
@@ -43,8 +43,11 @@ function AdminRoute({ children }: { children: React.ReactNode }) {
 
 function StudentRoute({ children }: { children: React.ReactNode }) {
   const { isVerifiedStudent, isLoading } = useAuth();
+  const location = useLocation();
   if (isLoading) return <PageLoader />;
-  if (!isVerifiedStudent) return <Navigate to="/auth" replace />;
+  if (!isVerifiedStudent) {
+    return <Navigate to="/auth" replace state={{ next: `${location.pathname}${location.search}` }} />;
+  }
   return <>{children}</>;
 }
 
@@ -72,10 +75,12 @@ function OwnerRoute({ children }: { children: React.ReactNode }) {
 /** A signed-in account must complete its authenticator-app challenge before
     any authenticated portal screen is rendered. Public pages remain public. */
 function MfaGate({ children }: { children: React.ReactNode }) {
-  const { isAuthenticated, isLoading, isMfaVerified } = useAuth();
+  const { isAuthenticated, isLoading, isMfaVerified, profile } = useAuth();
   const location = useLocation();
   if (isLoading) return <PageLoader />;
-  if (isAuthenticated && !isMfaVerified) {
+  // A phone number is a required testing contact detail. Keep this gate beside
+  // MFA so a signed-in session cannot bypass the profile-completion screen.
+  if (isAuthenticated && (!profile?.phone || !isMfaVerified)) {
     return <Navigate to="/auth" replace state={{ next: location.pathname }} />;
   }
   return <>{children}</>;
@@ -85,7 +90,7 @@ function MfaGate({ children }: { children: React.ReactNode }) {
 function RouteTelemetry() {
   const location = useLocation();
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     trackPageView(location.pathname);
   }, [location.pathname]);
 

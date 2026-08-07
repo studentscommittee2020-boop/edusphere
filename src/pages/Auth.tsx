@@ -148,7 +148,7 @@ export default function Auth() {
   const navigate = useNavigate();
   const location = useLocation();
   const { language, theme, setTheme } = useAppStore();
-  const { user } = useAuth();
+  const { user, refreshProfile } = useAuth();
   const [mode, setMode] = useState<AuthMode>("student");
   const [email, setEmail] = useState("");
   const [fileNumber, setFileNumber] = useState("");
@@ -195,6 +195,10 @@ export default function Auth() {
       toast.error("We could not securely save your phone number. Please try again.");
       return false;
     }
+    // Keep the route gate's profile snapshot in sync before MFA completes;
+    // otherwise a newly saved phone can briefly look missing and redirect back
+    // to this screen.
+    await refreshProfile();
     await beginMfaFlow();
     return true;
   }
@@ -213,6 +217,10 @@ export default function Auth() {
 
   async function handleStudentRequest(event: React.FormEvent) {
     event.preventDefault();
+    if (!normalizePhone(phone)) {
+      toast.error("Enter a valid international phone number, for example +96170123456.");
+      return;
+    }
     setIsLoading(true);
     const { error } = await requestStudentOtp(email, fileNumber);
     setIsLoading(false);
@@ -498,6 +506,14 @@ export default function Auth() {
                         className={inputClass}
                       />
                     </div>
+                  </label>
+                  <label className="block">
+                    <span className="text-xs font-display font-bold uppercase tracking-[0.14em] text-muted-foreground mb-2 block">Mobile number</span>
+                    <div className="relative">
+                      <Smartphone className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                      <input name="phone" data-sensitive="true" type="tel" inputMode="tel" autoComplete="tel" value={phone} onChange={(event) => setPhone(event.target.value)} placeholder="+961 70 123 456" required className={inputClass} />
+                    </div>
+                    <p className="mt-2 text-xs leading-5 text-muted-foreground">Required for the portal test. It stays in this form until your email code is confirmed.</p>
                   </label>
                   <button type="submit" disabled={isLoading} className="w-full py-3.5 rounded-2xl bg-gradient-red text-white font-display font-bold flex items-center justify-center gap-2 transition hover:brightness-110 disabled:opacity-50 shadow-lg shadow-red-600/20">
                     {isLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <>Verify and send code <ArrowRight className="w-4 h-4" /></>}

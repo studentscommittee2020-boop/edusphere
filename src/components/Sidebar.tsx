@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useMemo } from "react";
+import { useState, useCallback, useEffect, useMemo, useRef } from "react";
 import { NavLink, useLocation } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -61,13 +61,50 @@ export default function Sidebar() {
     signOut,
   } = useAuth();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const menuButtonRef = useRef<HTMLButtonElement>(null);
+  const mobileMenuRef = useRef<HTMLElement>(null);
   const isFrUi = language === "fr";
+  const hasStudentWorkspace = isVerifiedStudent && profile?.role === "student";
 
   const closeMobile = useCallback(() => setMobileOpen(false), []);
 
   useEffect(() => {
     setMobileOpen(false);
   }, [location.pathname]);
+
+  useEffect(() => {
+    if (!mobileOpen) return;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    const timer = window.setTimeout(() => {
+      mobileMenuRef.current?.querySelector<HTMLElement>("button, a, input, select, textarea, [tabindex]:not([tabindex='-1'])")?.focus();
+    }, 0);
+    return () => {
+      window.clearTimeout(timer);
+      document.body.style.overflow = previousOverflow;
+      menuButtonRef.current?.focus();
+    };
+  }, [mobileOpen]);
+
+  const handleDrawerKeyDown = useCallback((event: React.KeyboardEvent<HTMLElement>) => {
+    if (event.key === "Escape") {
+      event.preventDefault();
+      closeMobile();
+      return;
+    }
+    if (event.key !== "Tab") return;
+    const focusable = Array.from(mobileMenuRef.current?.querySelectorAll<HTMLElement>("button:not([disabled]), a[href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex='-1'])") ?? []);
+    if (focusable.length === 0) return;
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+    if (event.shiftKey && document.activeElement === first) {
+      event.preventDefault();
+      last.focus();
+    } else if (!event.shiftKey && document.activeElement === last) {
+      event.preventDefault();
+      first.focus();
+    }
+  }, [closeMobile]);
 
   const isActive = useCallback(
     (to: string) => (to === "/" ? location.pathname === "/" : location.pathname.startsWith(to)),
@@ -84,7 +121,7 @@ export default function Sidebar() {
         titleFr: "Principal",
         items: [
           { to: "/", label: "Dashboard", labelFr: "Tableau de Bord", icon: <LayoutDashboard className={iconClass} /> },
-          { to: "/sessions", label: "Exam Archive", labelFr: "Archives d'Examens", icon: <FileText className={iconClass} /> },
+          ...(hasStudentWorkspace ? [{ to: "/sessions", label: "Exam Archive", labelFr: "Archives d'Examens", icon: <FileText className={iconClass} /> }] : []),
           { to: "/exams", label: "Entrance Exams", labelFr: "Concours", icon: <GraduationCap className={iconClass} /> },
           { to: "/events", label: "Events", labelFr: "Évènements", icon: <Calendar className={iconClass} /> },
           { to: "/about", label: "About Faculty", labelFr: "À Propos", icon: <Info className={iconClass} /> },
@@ -92,7 +129,7 @@ export default function Sidebar() {
       },
     ];
 
-    if (isVerifiedStudent) {
+    if (hasStudentWorkspace) {
       result.push({
         key: "academics",
         title: "My Academics",
@@ -122,12 +159,19 @@ export default function Sidebar() {
       result.push({ key: "staff", title: "Workspace", titleFr: "Espace de Travail", items: staffItems });
     }
 
-    result.push({
-      key: "personal",
-      title: "Personal",
-      titleFr: "Personnel",
-      items: [{ to: "/profile", label: "My Profile", labelFr: "Mon Profil", icon: <User className={iconClass} /> }],
-    });
+    result.push(isAuthenticated
+      ? {
+          key: "personal",
+          title: "Personal",
+          titleFr: "Personnel",
+          items: [{ to: "/profile", label: "My Profile", labelFr: "Mon Profil", icon: <User className={iconClass} /> }],
+        }
+      : {
+          key: "access",
+          title: "Access",
+          titleFr: "Accès",
+          items: [{ to: "/auth", label: "Sign in", labelFr: "Se connecter", icon: <User className={iconClass} /> }],
+        });
 
     if (isAdmin) {
       const adminItems: NavItem[] = [
@@ -143,7 +187,7 @@ export default function Sidebar() {
     }
 
     return result;
-  }, [isAdmin, isCommitteeAdmin, isDoctor, isOwner, isVerifiedStudent]);
+  }, [hasStudentWorkspace, isAdmin, isAuthenticated, isCommitteeAdmin, isDoctor, isOwner]);
 
   const userInitials = profile?.full_name?.trim().slice(0, 1).toUpperCase() ?? "G";
   const userName = profile?.full_name?.trim() || (language === "fr" ? "Invité" : "Guest");
@@ -230,7 +274,7 @@ export default function Sidebar() {
                         "relative flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors duration-200 group",
                         active
                           ? "text-foreground"
-                          : "text-muted-foreground hover:text-foreground hover:bg-white/[0.04]",
+                          : "text-muted-foreground hover:text-foreground hover:bg-muted",
                       )}
                       aria-current={active ? "page" : undefined}
                     >
@@ -261,7 +305,7 @@ export default function Sidebar() {
                       <span
                         className={cn(
                           "relative z-10 font-display font-semibold text-sm flex-1",
-                          active && "text-red-400",
+                          active && "text-primary",
                         )}
                       >
                         {language === "fr" ? item.labelFr : item.label}
@@ -297,7 +341,7 @@ export default function Sidebar() {
               type="button"
               onClick={() => setLanguage("fr")}
               className={cn(
-                "px-3 py-1 rounded-md text-xs font-display font-bold transition-all duration-200",
+                "min-h-[44px] px-3 py-1 rounded-md text-xs font-display font-bold transition-all duration-200",
                 language === "fr"
                   ? "bg-gradient-red text-white"
                   : "text-muted-foreground hover:text-foreground",
@@ -310,7 +354,7 @@ export default function Sidebar() {
               type="button"
               onClick={() => setLanguage("en")}
               className={cn(
-                "px-3 py-1 rounded-md text-xs font-display font-bold transition-all duration-200",
+                "min-h-[44px] px-3 py-1 rounded-md text-xs font-display font-bold transition-all duration-200",
                 language === "en"
                   ? "bg-gradient-green text-white"
                   : "text-muted-foreground hover:text-foreground",
@@ -322,26 +366,16 @@ export default function Sidebar() {
           </div>
         </div>
 
-        <div className="flex items-center justify-between gap-3 px-1">
-          <span className="inline-flex items-center gap-2 text-xs text-muted-foreground">
-            {theme === "dark" ? <Moon className="w-[18px] h-[18px]" /> : <Sun className="w-[18px] h-[18px]" />}
-            {theme === "dark" ? "Dark mode" : "Light mode"}
-          </span>
-          <button
-            type="button"
-            onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-            className="relative h-7 w-12 rounded-full border border-border bg-muted transition-colors focus-visible:ring-2 focus-visible:ring-ring"
-            aria-label={`Switch to ${theme === "dark" ? "light" : "dark"} mode`}
-            role="switch"
-            aria-checked={theme === "dark"}
-          >
-            <span
-              className={cn(
-                "absolute top-1 h-5 w-5 rounded-full bg-primary shadow-sm transition-transform",
-                theme === "dark" ? "translate-x-6" : "translate-x-1",
-              )}
-            />
-          </button>
+        <div className="px-1">
+          <p className="mb-2 text-xs text-muted-foreground">{language === "fr" ? "Apparence" : "Appearance"}</p>
+          <div className="grid grid-cols-2 gap-1 rounded-lg bg-muted p-1" role="group" aria-label={language === "fr" ? "Apparence" : "Appearance"}>
+            <button type="button" onClick={() => setTheme("dark")} aria-pressed={theme === "dark"} className={cn("min-h-[44px] rounded-md px-2 text-xs font-semibold transition-colors", theme === "dark" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:bg-background/60 hover:text-foreground")}>
+              <Moon className="mr-1 inline h-3.5 w-3.5" />{language === "fr" ? "Sombre" : "Dark"}
+            </button>
+            <button type="button" onClick={() => setTheme("light")} aria-pressed={theme === "light"} className={cn("min-h-[44px] rounded-md px-2 text-xs font-semibold transition-colors", theme === "light" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:bg-background/60 hover:text-foreground")}>
+              <Sun className="mr-1 inline h-3.5 w-3.5" />{language === "fr" ? "Clair" : "Light"}
+            </button>
+          </div>
         </div>
 
         {isAuthenticated && (
@@ -379,9 +413,11 @@ export default function Sidebar() {
         <button
           type="button"
           onClick={() => setMobileOpen(true)}
-          className="p-2 rounded-lg hover:bg-white/[0.06] transition-colors duration-200"
+          ref={menuButtonRef}
+          className="min-h-[44px] min-w-[44px] p-2 rounded-lg hover:bg-muted transition-colors duration-200"
           aria-label={language === "fr" ? "Ouvrir le menu" : "Open navigation menu"}
           aria-expanded={mobileOpen}
+          aria-controls="mobile-navigation"
         >
           <Menu className="w-5 h-5 text-foreground" />
         </button>
@@ -393,7 +429,7 @@ export default function Sidebar() {
         <button
           type="button"
           onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-          className="ml-auto p-2 rounded-lg hover:bg-muted transition-colors"
+          className="ml-auto min-h-[44px] min-w-[44px] p-2 rounded-lg hover:bg-muted transition-colors"
           aria-label={`Switch to ${theme === "dark" ? "light" : "dark"} mode`}
         >
           {theme === "dark" ? <Sun className="w-5 h-5 text-foreground" /> : <Moon className="w-5 h-5 text-foreground" />}
@@ -414,19 +450,22 @@ export default function Sidebar() {
             />
 
             <motion.aside
+              ref={mobileMenuRef}
               initial={{ x: -300 }}
               animate={{ x: 0 }}
               exit={{ x: -300 }}
               transition={{ type: "spring", damping: 32, stiffness: 320 }}
+              id="mobile-navigation"
               className="lg:hidden fixed left-0 top-0 h-full w-[288px] border-r border-border z-50 shadow-2xl shadow-black/60"
               role="dialog"
               aria-modal="true"
               aria-label={language === "fr" ? "Menu de navigation" : "Navigation menu"}
+              onKeyDown={handleDrawerKeyDown}
             >
               <button
                 type="button"
                 onClick={closeMobile}
-                className="absolute top-4 right-4 p-1.5 rounded-lg hover:bg-white/[0.06] transition-colors duration-200 z-10"
+                className="absolute top-3 right-3 min-h-[44px] min-w-[44px] p-2 rounded-lg hover:bg-muted transition-colors duration-200 z-10"
                 aria-label={language === "fr" ? "Fermer le menu" : "Close navigation menu"}
               >
                 <X className="w-5 h-5 text-muted-foreground" />

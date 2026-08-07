@@ -56,6 +56,7 @@ function mockProfile(overrides: Partial<Profile> & Pick<Profile, "id" | "full_na
     major: "Common",
     semester: "LS1",
     track: "french",
+    phone: "+96170123456",
     role: "student",
     created_at: new Date(0).toISOString(),
     updated_at: new Date(0).toISOString(),

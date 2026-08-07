@@ -22,30 +22,36 @@ export default function Layout() {
 
   return (
     <div className="min-h-screen bg-background relative">
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[60] focus:rounded-lg focus:bg-primary focus:px-4 focus:py-3 focus:text-primary-foreground focus:shadow-lg"
+      >
+        Skip to main content
+      </a>
+
+      <div className="fixed inset-0 z-0 pointer-events-none overflow-hidden" aria-hidden="true">
+        <div className="bg-orb-red" style={{ top: "-10%", left: "-15%" }} />
+        <div className="bg-orb-green" style={{ bottom: "-10%", right: "-15%" }} />
+        <div className="bg-orb-accent" style={{ top: "40%", left: "30%" }} />
+        <div className="bg-mesh fixed inset-0" />
+        <div className="bg-grid fixed inset-0 mask-fade-b" />
+      </div>
       {/* Tablets and desktops get the WebGL scene; phones get CSS orbs at a fraction of
           the cost. Both are decorative — a WebGL failure must never take the
           page down, hence the boundary. */}
       {isDesktop ? (
-        <div className="fixed inset-0 z-0 pointer-events-none">
+        <div className="fixed inset-0 z-[1] pointer-events-none" aria-hidden="true">
           <ErrorBoundary fallback={null}>
             <Suspense fallback={null}>
               <HeroScene />
             </Suspense>
           </ErrorBoundary>
         </div>
-      ) : (
-        <div className="fixed inset-0 z-0 pointer-events-none overflow-hidden">
-          <div className="bg-orb-red" style={{ top: "-10%", left: "-15%" }} />
-          <div className="bg-orb-green" style={{ bottom: "-10%", right: "-15%" }} />
-          <div className="bg-orb-accent" style={{ top: "40%", left: "30%" }} />
-          <div className="bg-mesh fixed inset-0" />
-          <div className="bg-grid fixed inset-0 opacity-30 mask-fade-b" />
-        </div>
-      )}
+      ) : null}
 
       <Sidebar />
 
-      <main className="lg:pl-[var(--sidebar-w)] min-h-screen relative z-10">
+      <main id="main-content" className="lg:pl-[var(--sidebar-w)] min-h-screen relative z-10" tabIndex={-1}>
         <div className="pt-14 lg:pt-0">
           <Outlet />
         </div>
