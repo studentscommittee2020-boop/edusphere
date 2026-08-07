@@ -11,7 +11,9 @@ export default function Layout() {
   const [isDesktop, setIsDesktop] = useState(false);
 
   useEffect(() => {
-    const mq = window.matchMedia("(min-width: 768px)");
+    // Tablets use the low-cost CSS backdrop. Reserve the WebGL scene for wide
+    // desktop screens where GPU budget and available space justify it.
+    const mq = window.matchMedia("(min-width: 1280px)");
     setIsDesktop(mq.matches);
     const handler = (event: MediaQueryListEvent) => setIsDesktop(event.matches);
     mq.addEventListener("change", handler);

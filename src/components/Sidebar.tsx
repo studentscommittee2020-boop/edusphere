@@ -11,7 +11,9 @@ import {
   User,
   Globe,
   LogOut,
+  Moon,
   Menu,
+  Sun,
   X,
   Info,
   ClipboardList,
@@ -47,7 +49,7 @@ const iconClass = "w-[18px] h-[18px]";
 
 export default function Sidebar() {
   const location = useLocation();
-  const { language, setLanguage } = useAppStore();
+  const { language, setLanguage, theme, setTheme } = useAppStore();
   const {
     isAdmin,
     isAuthenticated,
@@ -320,6 +322,27 @@ export default function Sidebar() {
           </div>
         </div>
 
+        <div className="flex items-center justify-between gap-3 px-1">
+          <span className="inline-flex items-center gap-2 text-xs text-muted-foreground">
+            {theme === "dark" ? <Moon className="w-[18px] h-[18px]" /> : <Sun className="w-[18px] h-[18px]" />}
+            {theme === "dark" ? "Dark mode" : "Light mode"}
+          </span>
+          <button
+            type="button"
+            onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+            className="relative h-7 w-12 rounded-full border border-border bg-muted transition-colors focus-visible:ring-2 focus-visible:ring-ring"
+            aria-label={`Switch to ${theme === "dark" ? "light" : "dark"} mode`}
+            aria-pressed={theme === "dark"}
+          >
+            <span
+              className={cn(
+                "absolute top-1 h-5 w-5 rounded-full bg-primary shadow-sm transition-transform",
+                theme === "dark" ? "translate-x-6" : "translate-x-1",
+              )}
+            />
+          </button>
+        </div>
+
         {isAuthenticated && (
           <button
             type="button"
@@ -366,6 +389,14 @@ export default function Sidebar() {
           <img src="/logo.svg" alt="" aria-hidden="true" className="w-7 h-7 rounded-md bg-white p-0.5" />
           <span className="font-display font-bold text-sm text-foreground">EduSphere</span>
         </div>
+        <button
+          type="button"
+          onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+          className="ml-auto p-2 rounded-lg hover:bg-muted transition-colors"
+          aria-label={`Switch to ${theme === "dark" ? "light" : "dark"} mode`}
+        >
+          {theme === "dark" ? <Sun className="w-5 h-5 text-foreground" /> : <Moon className="w-5 h-5 text-foreground" />}
+        </button>
       </div>
 
       <AnimatePresence>

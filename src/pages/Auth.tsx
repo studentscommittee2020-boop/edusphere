@@ -12,7 +12,9 @@ import {
   Loader2,
   Lock,
   Mail,
+  Moon,
   ShieldCheck,
+  Sun,
 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/lib/supabase";
@@ -137,7 +139,7 @@ function describeStaffOtpVerifyError(error: AuthError, language: string): string
 
 export default function Auth() {
   const navigate = useNavigate();
-  const { language } = useAppStore();
+  const { language, theme, setTheme } = useAppStore();
   const [mode, setMode] = useState<AuthMode>("student");
   const [email, setEmail] = useState("");
   const [fileNumber, setFileNumber] = useState("");
@@ -280,6 +282,14 @@ export default function Auth() {
         animate={{ opacity: 1, y: 0 }}
         className="w-full max-w-5xl grid md:grid-cols-[0.9fr_1.1fr] overflow-hidden rounded-[2rem] border border-border glass shadow-2xl shadow-black/50 relative z-10"
       >
+        <button
+          type="button"
+          onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+          className="absolute right-5 top-5 z-20 rounded-xl border border-border bg-background/80 p-2 text-foreground transition-colors hover:bg-muted"
+          aria-label={`Switch to ${theme === "dark" ? "light" : "dark"} mode`}
+        >
+          {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+        </button>
         <section className="p-8 sm:p-10 md:p-12 bg-gradient-to-br from-red-600/20 via-red-950/20 to-transparent border-b md:border-b-0 md:border-r border-border flex flex-col justify-between min-h-[290px]">
           <div>
             <div className="inline-flex items-center gap-3">

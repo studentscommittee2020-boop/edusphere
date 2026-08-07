@@ -104,6 +104,19 @@
     --header-h: 68px;
   }
 
+  :root[data-theme="light"] {
+    --surface-0: 220 33% 97%;
+    --surface-1: 0 0% 100%;
+    --surface-2: 220 28% 98%;
+    --surface-3: 220 22% 94%;
+    --surface-4: 220 18% 88%;
+    --foreground: 225 20% 15%;
+    --muted-foreground: 225 10% 40%;
+    --border: 220 16% 84%;
+    --border-strong: 220 16% 74%;
+    --sidebar-background: 0 0% 100%;
+  }
+
   * {
     @apply border-border;
   }
@@ -244,7 +257,7 @@
   /* Subtle top-down fade — use on large display headings. */
   .text-gradient-chrome {
     @apply bg-clip-text text-transparent;
-    background-image: linear-gradient(180deg, hsl(220 14% 98%) 0%, hsl(220 9% 62%) 100%);
+    background-image: linear-gradient(180deg, hsl(var(--foreground)) 0%, hsl(var(--muted-foreground)) 100%);
   }
 
   .bg-gradient-red   { background: linear-gradient(135deg, hsl(var(--red-600)) 0%, hsl(15 85% 50%) 100%); }
@@ -343,6 +356,22 @@
     backdrop-filter: blur(16px) saturate(160%);
     -webkit-backdrop-filter: blur(16px) saturate(160%);
     border: 1px solid hsl(0 0% 100% / 0.07);
+  }
+
+  @media (max-width: 1279px) {
+    .bg-orb-red,
+    .bg-orb-green,
+    .bg-orb-accent {
+      animation: none;
+      filter: blur(64px);
+    }
+  }
+
+  @media (max-width: 767px) {
+    .glass {
+      backdrop-filter: none;
+      -webkit-backdrop-filter: none;
+    }
   }
 
   /* Loading placeholder. Pair with a fixed height to avoid layout shift. */

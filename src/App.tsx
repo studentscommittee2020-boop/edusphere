@@ -4,6 +4,7 @@ import { Toaster } from "sonner";
 import Layout from "./components/Layout";
 import { useAuth } from "./contexts/AuthContext";
 import { trackPageView } from "./lib/telemetry";
+import { useAppStore } from "./store/appStore";
 
 // ── Page imports (lazy for code splitting) ────────────────────────────────────
 const Index     = lazy(() => import("./pages/Index"));
@@ -81,6 +82,13 @@ function RouteTelemetry() {
 
 // ── App ───────────────────────────────────────────────────────────────────────
 export default function App() {
+  const theme = useAppStore((state) => state.theme);
+
+  useEffect(() => {
+    document.documentElement.dataset.theme = theme;
+    document.documentElement.style.colorScheme = theme;
+  }, [theme]);
+
   return (
     <BrowserRouter>
       <RouteTelemetry />

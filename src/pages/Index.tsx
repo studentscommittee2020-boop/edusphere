@@ -79,10 +79,10 @@ function SectionHeader({
 }) {
   return (
     <div className="flex items-center justify-between mb-4">
-      <h2 className="font-display font-bold text-lg text-white">{title}</h2>
+      <h2 className="font-display font-bold text-lg text-foreground">{title}</h2>
       <Link
         to={to}
-        className="flex items-center gap-1 text-sm text-neutral-500 hover:text-neutral-300 transition-colors group"
+        className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors group"
       >
         {linkLabel}
         <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
@@ -293,10 +293,10 @@ export default function Index() {
       <motion.section {...fadeIn}>
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <h1 className="font-display font-extrabold text-2xl sm:text-3xl text-white leading-tight">
+            <h1 className="font-display font-extrabold text-2xl sm:text-3xl text-foreground leading-tight">
               {t(language, "Bienvenue, Etudiant!", "Welcome, Student!")}
             </h1>
-            <p className="text-neutral-500 text-sm mt-1">
+            <p className="text-muted-foreground text-sm mt-1">
               {t(
                 language,
                 "Votre portail de ressources academiques",
@@ -306,12 +306,12 @@ export default function Index() {
           </div>
 
           <div className="flex items-center gap-2">
-            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-neutral-900/80 border border-white/[0.06] text-xs text-neutral-400">
-              <GraduationCap className="w-3.5 h-3.5 text-neutral-500" />
-              {t(language, "Semestre:", "Semester:")} <span className="text-neutral-300 font-medium">--</span>
+            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg surface text-xs text-muted-foreground">
+              <GraduationCap className="w-3.5 h-3.5" />
+              {t(language, "Semestre:", "Semester:")} <span className="text-foreground font-medium">--</span>
             </span>
-            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-neutral-900/80 border border-white/[0.06] text-xs text-neutral-400">
-              {t(language, "Filiere:", "Major:")} <span className="text-neutral-300 font-medium">--</span>
+            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg surface text-xs text-muted-foreground">
+              {t(language, "Filiere:", "Major:")} <span className="text-foreground font-medium">--</span>
             </span>
           </div>
         </div>
@@ -331,7 +331,7 @@ export default function Index() {
               <motion.div
                 key={i}
                 variants={fadeIn}
-                className="bg-neutral-900/80 border border-white/[0.06] rounded-xl p-5 flex flex-col gap-3"
+                className="surface rounded-xl p-5 flex flex-col gap-3"
               >
                 <div className="skeleton w-10 h-10 rounded-xl" />
                 <div className="space-y-2">
@@ -345,7 +345,7 @@ export default function Index() {
                 key={i}
                 variants={fadeIn}
                 whileHover={{ y: -4 }}
-                className="bg-neutral-900/80 border border-white/[0.06] rounded-xl p-5 flex flex-col gap-3 transition-shadow duration-300 hover:shadow-lg"
+                className="surface rounded-xl p-5 flex flex-col gap-3 transition-shadow duration-300 hover:shadow-lg"
               >
                 <div
                   className={`w-10 h-10 rounded-xl flex items-center justify-center text-white ${
@@ -355,10 +355,10 @@ export default function Index() {
                   {stat.icon}
                 </div>
                 <div>
-                  <p className="font-display font-bold text-2xl sm:text-3xl text-white leading-none">
+                  <p className="font-display font-bold text-2xl sm:text-3xl text-foreground leading-none">
                     {stat.value}
                   </p>
-                  <p className="text-sm text-neutral-400 mt-1">{stat.label}</p>
+                  <p className="text-sm text-muted-foreground mt-1">{stat.label}</p>
                 </div>
               </motion.div>
             ))}
@@ -383,7 +383,7 @@ export default function Index() {
             {Array.from({ length: 5 }).map((_, i) => (
               <div
                 key={i}
-                className="bg-neutral-900/80 border border-white/[0.06] rounded-xl p-4 flex flex-col gap-3"
+                className="surface rounded-xl p-4 flex flex-col gap-3"
               >
                 <div className="flex gap-1.5">
                   <div className="skeleton h-5 w-14 rounded-full" />
@@ -410,11 +410,11 @@ export default function Index() {
             {recentExams.map((exam) => (
               <div
                 key={exam.id}
-                className="bg-neutral-900/80 border border-white/[0.06] rounded-xl p-4 flex flex-col gap-3 hover:-translate-y-0.5 transition-all duration-300 card-glow"
+                className="surface rounded-xl p-4 flex flex-col gap-3 hover:-translate-y-0.5 transition-all duration-300 card-glow"
               >
                 {/* Badges */}
                 <div className="flex flex-wrap items-center gap-1.5">
-                  <span className="px-2 py-0.5 rounded-full text-[11px] font-medium bg-neutral-800 text-neutral-300 border border-white/[0.06]">
+                  <span className="px-2 py-0.5 rounded-full text-[11px] font-medium bg-muted text-foreground border border-border">
                     {exam.semester}
                   </span>
                   <span
@@ -428,13 +428,13 @@ export default function Index() {
 
                 {/* Title — follows the course's teaching language (track),
                     never the interface language. */}
-                <h3 className="font-display font-bold text-sm text-white leading-snug line-clamp-2">
+                <h3 className="font-display font-bold text-sm text-foreground leading-snug line-clamp-2">
                   {courseTitle(exam)}
                 </h3>
 
                 {/* Year */}
                 <div className="mt-auto">
-                  <span className="text-xs text-neutral-500">{exam.year}</span>
+                  <span className="text-xs text-muted-foreground">{exam.year}</span>
                 </div>
               </div>
             ))}
@@ -461,7 +461,7 @@ export default function Index() {
             {Array.from({ length: 3 }).map((_, i) => (
               <div
                 key={i}
-                className="bg-neutral-900/80 border border-white/[0.06] rounded-xl px-5 py-4 flex flex-col sm:flex-row sm:items-center gap-4"
+                className="surface rounded-xl px-5 py-4 flex flex-col sm:flex-row sm:items-center gap-4"
               >
                 <div className="skeleton shrink-0 w-14 h-14 rounded-xl" />
                 <div className="flex-1 min-w-0 space-y-2">
@@ -489,7 +489,7 @@ export default function Index() {
               return (
                 <div
                   key={event.id}
-                  className="bg-neutral-900/80 border border-white/[0.06] rounded-xl px-5 py-4 flex flex-col sm:flex-row sm:items-center gap-4 hover:border-white/[0.12] transition-colors duration-200"
+                  className="surface rounded-xl px-5 py-4 flex flex-col sm:flex-row sm:items-center gap-4 hover:border-primary/35 transition-colors duration-200"
                 >
                   {/* Date badge */}
                   <div className="shrink-0 w-14 h-14 rounded-xl bg-gradient-red flex flex-col items-center justify-center text-white">
@@ -503,10 +503,10 @@ export default function Index() {
 
                   {/* Content */}
                   <div className="flex-1 min-w-0">
-                    <h3 className="font-display font-bold text-sm text-white leading-snug truncate">
+                    <h3 className="font-display font-bold text-sm text-foreground leading-snug truncate">
                       {event.title}
                     </h3>
-                    <div className="flex flex-wrap items-center gap-3 mt-1.5 text-xs text-neutral-500">
+                    <div className="flex flex-wrap items-center gap-3 mt-1.5 text-xs text-muted-foreground">
                       <span className="flex items-center gap-1">
                         <Clock className="w-3 h-3" />
                         {event.time}

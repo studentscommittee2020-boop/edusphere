@@ -39,8 +39,10 @@ interface AppState {
   events: EventItem[];
   // UI State
   language: "fr" | "en";
+  theme: "dark" | "light";
   // Actions
   setLanguage: (lang: "fr" | "en") => void;
+  setTheme: (theme: "dark" | "light") => void;
   addPreviousExam: (exam: PreviousExam) => void;
   removePreviousExam: (id: string) => void;
   updatePreviousExam: (exam: PreviousExam) => void;
@@ -62,8 +64,10 @@ export const useAppStore = create<AppState>()(
       events: defaultEvents,
       // ── Initial UI State ──────────────────────────────────────────────────
       language: "fr",
+      theme: "dark",
       // ── Language ──────────────────────────────────────────────────────────
       setLanguage: (lang) => set({ language: lang }),
+      setTheme: (theme) => set({ theme }),
       // ── Admin CRUD ────────────────────────────────────────────────────────
       addPreviousExam: (exam) =>
         set((s) => ({ previousExams: [...s.previousExams, exam] })),
@@ -88,6 +92,7 @@ export const useAppStore = create<AppState>()(
       name: "edusphere-v2-store",
       partialize: (state) => ({
         language: state.language,
+        theme: state.theme,
       }),
     }
   )
