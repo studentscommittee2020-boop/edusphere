@@ -332,7 +332,8 @@ export default function Sidebar() {
             onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
             className="relative h-7 w-12 rounded-full border border-border bg-muted transition-colors focus-visible:ring-2 focus-visible:ring-ring"
             aria-label={`Switch to ${theme === "dark" ? "light" : "dark"} mode`}
-            aria-pressed={theme === "dark"}
+            role="switch"
+            aria-checked={theme === "dark"}
           >
             <span
               className={cn(

@@ -272,6 +272,7 @@ export type Database = {
             | "LS9"
             | null;
           track: "french" | "english" | null;
+          phone: string | null;
           role: "student" | "doctor" | "committee_admin" | "admin";
           created_at: string;
           updated_at: string;
@@ -301,6 +302,7 @@ export type Database = {
             | "LS9"
             | null;
           track?: "french" | "english" | null;
+          phone?: string | null;
           role?: "student" | "doctor" | "committee_admin" | "admin";
           created_at?: string;
           updated_at?: string;
@@ -330,6 +332,7 @@ export type Database = {
             | "LS9"
             | null;
           track?: "french" | "english" | null;
+          phone?: string | null;
           role?: "student" | "doctor" | "committee_admin" | "admin";
           created_at?: string;
           updated_at?: string;

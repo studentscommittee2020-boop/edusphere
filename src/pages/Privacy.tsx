@@ -78,6 +78,7 @@ export default function Privacy() {
           <li>Your browser, language, timezone, screen and window size.</li>
           <li>The page that referred you to us.</li>
           <li>Your account id, once you are signed in.</li>
+          <li>Your required contact phone number, stored in normalized international format.</li>
         </ul>
       ),
       bodyFr: (
@@ -98,8 +99,8 @@ export default function Privacy() {
         <p>
           We use Sentry Session Replay, which reconstructs what happened on
           screen — pages, clicks, scrolling and typed text — so we can diagnose
-          errors. Password fields and one-time codes are excluded from recording
-          and are never captured.
+          errors. Password fields, phone numbers, and one-time codes are excluded
+          from recording and are never captured.
         </p>
       ),
       bodyFr: (

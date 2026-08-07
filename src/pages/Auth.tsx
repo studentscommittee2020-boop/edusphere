@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { isAuthRetryableFetchError, type AuthError } from "@supabase/supabase-js";
 import {
@@ -15,6 +15,7 @@ import {
   Moon,
   ShieldCheck,
   Sun,
+  Smartphone,
 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/lib/supabase";
@@ -25,8 +26,9 @@ import {
   verifyStaffOtp,
 } from "@/services/studentAuth";
 import { useAppStore } from "@/store/appStore";
+import { useAuth } from "@/contexts/AuthContext";
 
-type AuthMode = "student" | "verify" | "staff" | "forgot" | "staffOtp" | "staffOtpVerify" | "review";
+type AuthMode = "student" | "verify" | "staff" | "forgot" | "staffOtp" | "staffOtpVerify" | "review" | "contact" | "mfaEnroll" | "mfaChallenge";
 
 type ReviewAccount = {
   label: string;
@@ -48,6 +50,11 @@ const reviewAccounts: ReviewAccount[] = [
 
 const inputClass =
   "w-full pl-11 pr-4 py-3.5 bg-input border border-border rounded-2xl text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:ring-2 focus:ring-red-500/40 focus:border-red-500/60 transition-all";
+
+function normalizePhone(value: string): string | null {
+  const compact = value.trim().replace(/[\s().-]/g, "");
+  return /^\+[1-9]\d{7,14}$/.test(compact) ? compact : null;
+}
 
 // Local FR/EN helper, matching the convention used across the rest of the app
 // (see e.g. src/pages/About.tsx, src/pages/Index.tsx) — `language` from useAppStore()
@@ -139,18 +146,79 @@ function describeStaffOtpVerifyError(error: AuthError, language: string): string
 
 export default function Auth() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { language, theme, setTheme } = useAppStore();
+  const { user } = useAuth();
   const [mode, setMode] = useState<AuthMode>("student");
   const [email, setEmail] = useState("");
   const [fileNumber, setFileNumber] = useState("");
   const [otp, setOtp] = useState("");
   const [staffCode, setStaffCode] = useState("");
   const [password, setPassword] = useState("");
+  const [phone, setPhone] = useState("");
+  const [mfaCode, setMfaCode] = useState("");
+  const [mfaFactorId, setMfaFactorId] = useState("");
+  const [mfaQr, setMfaQr] = useState("");
+  const [mfaSecret, setMfaSecret] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+
+  const nextPath = (location.state as { next?: string } | null)?.next || "/";
+
+  async function beginMfaFlow() {
+    const { data, error } = await supabase.auth.mfa.listFactors();
+    if (error) {
+      toast.error("We could not check your authenticator setup. Please try again.");
+      return;
+    }
+    const factor = data.totp.find((item) => item.status === "verified");
+    if (factor) {
+      setMfaFactorId(factor.id);
+      setMode("mfaChallenge");
+    } else {
+      setMode("mfaEnroll");
+    }
+  }
+
+  async function savePhoneAndBeginMfa() {
+    const normalized = normalizePhone(phone);
+    if (!normalized) {
+      toast.error("Enter a valid international phone number, for example +96170123456.");
+      return false;
+    }
+    const { data: { user: activeUser } } = await supabase.auth.getUser();
+    if (!activeUser) {
+      toast.error("Your sign-in session expired. Please sign in again.");
+      return false;
+    }
+    const { error } = await supabase.from("profiles").update({ phone: normalized }).eq("id", activeUser.id);
+    if (error) {
+      toast.error("We could not securely save your phone number. Please try again.");
+      return false;
+    }
+    await beginMfaFlow();
+    return true;
+  }
+
+  useEffect(() => {
+    if (!user) return;
+    supabase.from("profiles").select("phone").eq("id", user.id).single().then(({ data }) => {
+      if (!data?.phone) {
+        setMode("contact");
+        return;
+      }
+      setPhone(data.phone);
+      void beginMfaFlow();
+    });
+  }, [user?.id]);
 
   async function handleStudentRequest(event: React.FormEvent) {
     event.preventDefault();
     setIsLoading(true);
+    if (!normalizePhone(phone)) {
+      setIsLoading(false);
+      toast.error("Enter a valid international phone number, for example +96170123456.");
+      return;
+    }
     const { error } = await requestStudentOtp(email, fileNumber);
     setIsLoading(false);
 
@@ -174,8 +242,7 @@ export default function Auth() {
       return;
     }
 
-    toast.success("Student access confirmed.");
-    navigate("/sessions", { replace: true });
+    if (await savePhoneAndBeginMfa()) toast.success("Student access confirmed. Complete secure access below.");
   }
 
   async function handleStaffLogin(event: React.FormEvent) {
@@ -192,8 +259,7 @@ export default function Auth() {
       return;
     }
 
-    toast.success("Welcome back.");
-    navigate("/", { replace: true });
+    if (await savePhoneAndBeginMfa()) toast.success("Welcome back. Complete secure access below.");
   }
 
   async function handlePasswordReset(event: React.FormEvent) {
@@ -243,8 +309,45 @@ export default function Auth() {
       return;
     }
 
-    toast.success(t(language, "Bon retour.", "Welcome back."));
-    navigate("/", { replace: true });
+    if (await savePhoneAndBeginMfa()) toast.success(t(language, "Bon retour. Finalisez l'accès sécurisé.", "Welcome back. Complete secure access below."));
+  }
+
+  async function handlePhoneSetup(event: React.FormEvent) {
+    event.preventDefault();
+    setIsLoading(true);
+    await savePhoneAndBeginMfa();
+    setIsLoading(false);
+  }
+
+  async function startAuthenticatorEnrollment() {
+    setIsLoading(true);
+    const { data, error } = await supabase.auth.mfa.enroll({
+      factorType: "totp",
+      friendlyName: "EduSphere authenticator",
+    });
+    setIsLoading(false);
+    if (error || !data.totp) {
+      toast.error(error?.message || "We could not start authenticator setup.");
+      return;
+    }
+    setMfaFactorId(data.id);
+    setMfaQr(data.totp.qr_code);
+    setMfaSecret(data.totp.secret);
+  }
+
+  async function verifyAuthenticator(event: React.FormEvent) {
+    event.preventDefault();
+    if (!mfaFactorId || mfaCode.length !== 6) return;
+    setIsLoading(true);
+    const { error } = await supabase.auth.mfa.challengeAndVerify({ factorId: mfaFactorId, code: mfaCode });
+    setIsLoading(false);
+    setMfaCode("");
+    if (error) {
+      toast.error("That authenticator code is invalid or expired. Try the current code.");
+      return;
+    }
+    toast.success("Two-factor authentication confirmed.");
+    navigate(nextPath, { replace: true });
   }
 
   const title = {
@@ -255,6 +358,9 @@ export default function Auth() {
     staffOtp: t(language, "Code de connexion", "Email code sign-in"),
     staffOtpVerify: t(language, "Entrez votre code", "Enter your code"),
     review: "Dean review access",
+    contact: "Add your contact number",
+    mfaEnroll: "Set up your authenticator",
+    mfaChallenge: "Verify your identity",
   }[mode];
 
   const description = {
@@ -269,6 +375,9 @@ export default function Auth() {
     ),
     staffOtpVerify: t(language, `Nous avons envoyé un code à ${email}.`, `We sent a code to ${email}.`),
     review: "Choose a prepared review account. Its email is filled in for you; enter the temporary review password on the next screen.",
+    contact: "A phone number is required for your EduSphere profile. It is not used to send sign-in codes.",
+    mfaEnroll: "Use an authenticator app such as Google Authenticator, Microsoft Authenticator, Authy, or 1Password.",
+    mfaChallenge: "Enter the current six-digit code from your authenticator app to continue.",
   }[mode];
 
   return (
@@ -371,6 +480,13 @@ export default function Auth() {
                     </div>
                   </label>
                   <label className="block">
+                    <span className="text-xs font-display font-bold uppercase tracking-[0.14em] text-muted-foreground mb-2 block">Mobile number</span>
+                    <div className="relative">
+                      <Smartphone className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                      <input name="phone" data-sensitive="true" type="tel" inputMode="tel" autoComplete="tel" value={phone} onChange={(event) => setPhone(event.target.value)} placeholder="+961 70 123 456" required className={inputClass} />
+                    </div>
+                  </label>
+                  <label className="block">
                     <span className="text-xs font-display font-bold uppercase tracking-[0.14em] text-muted-foreground mb-2 block">File number</span>
                     <div className="relative">
                       <FileKey2 className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
@@ -424,6 +540,10 @@ export default function Auth() {
                     <div className="relative"><Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" /><input type="email" value={email} onChange={(event) => setEmail(event.target.value)} required className={inputClass} /></div>
                   </label>
                   <label className="block">
+                    <span className="text-xs font-display font-bold uppercase tracking-[0.14em] text-muted-foreground mb-2 block">Mobile number</span>
+                    <div className="relative"><Smartphone className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" /><input name="phone" data-sensitive="true" type="tel" inputMode="tel" autoComplete="tel" value={phone} onChange={(event) => setPhone(event.target.value)} placeholder="+961 70 123 456" required className={inputClass} /></div>
+                  </label>
+                  <label className="block">
                     <span className="text-xs font-display font-bold uppercase tracking-[0.14em] text-muted-foreground mb-2 block">Password</span>
                     <div className="relative"><Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" /><input type="password" value={password} onChange={(event) => setPassword(event.target.value)} required className={inputClass} /></div>
                   </label>
@@ -456,6 +576,10 @@ export default function Auth() {
                       <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                       <input type="email" value={email} onChange={(event) => setEmail(event.target.value)} required className={inputClass} />
                     </div>
+                  </label>
+                  <label className="block">
+                    <span className="text-xs font-display font-bold uppercase tracking-[0.14em] text-muted-foreground mb-2 block">Mobile number</span>
+                    <div className="relative"><Smartphone className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" /><input name="phone" data-sensitive="true" type="tel" inputMode="tel" autoComplete="tel" value={phone} onChange={(event) => setPhone(event.target.value)} placeholder="+961 70 123 456" required className={inputClass} /></div>
                   </label>
                   <p className="text-xs leading-5 text-muted-foreground">
                     {t(
@@ -515,6 +639,42 @@ export default function Auth() {
                 </form>
               )}
 
+              {mode === "contact" && (
+                <form onSubmit={handlePhoneSetup} className="space-y-5">
+                  <label className="block">
+                    <span className="text-xs font-display font-bold uppercase tracking-[0.14em] text-muted-foreground mb-2 block">Mobile number</span>
+                    <div className="relative"><Smartphone className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" /><input name="phone" data-sensitive="true" type="tel" inputMode="tel" autoComplete="tel" value={phone} onChange={(event) => setPhone(event.target.value)} placeholder="+961 70 123 456" required className={inputClass} /></div>
+                  </label>
+                  <button type="submit" disabled={isLoading} className="w-full py-3.5 rounded-2xl bg-gradient-red text-white font-display font-bold flex items-center justify-center gap-2 disabled:opacity-50">
+                    {isLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <>Continue <ArrowRight className="w-4 h-4" /></>}
+                  </button>
+                </form>
+              )}
+
+              {mode === "mfaEnroll" && (
+                <div className="space-y-5">
+                  {!mfaQr ? (
+                    <button type="button" onClick={startAuthenticatorEnrollment} disabled={isLoading} className="w-full py-3.5 rounded-2xl bg-gradient-red text-white font-display font-bold flex items-center justify-center gap-2 disabled:opacity-50">
+                      {isLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <><ShieldCheck className="w-4 h-4" /> Set up authenticator</>}
+                    </button>
+                  ) : (
+                    <form onSubmit={verifyAuthenticator} className="space-y-5">
+                      <div className="rounded-2xl bg-white p-4 mx-auto w-fit"><img src={`data:image/svg+xml;utf8,${encodeURIComponent(mfaQr)}`} alt="Authenticator setup QR code" className="w-48 h-48" /></div>
+                      <p className="text-xs text-muted-foreground text-center">Can't scan it? Add this setup key manually: <span className="font-mono text-foreground break-all">{mfaSecret}</span></p>
+                      <label className="block"><span className="text-xs font-display font-bold uppercase tracking-[0.14em] text-muted-foreground mb-2 block">Authenticator code</span><div className="relative"><KeyRound className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" /><input name="mfa_code" data-sensitive="true" inputMode="numeric" autoComplete="one-time-code" value={mfaCode} onChange={(event) => setMfaCode(event.target.value.replace(/\D/g, "").slice(0, 6))} placeholder="000000" required minLength={6} maxLength={6} className={`${inputClass} tracking-[0.5em] font-mono text-lg`} /></div></label>
+                      <button type="submit" disabled={isLoading || mfaCode.length !== 6} className="w-full py-3.5 rounded-2xl bg-gradient-red text-white font-display font-bold flex items-center justify-center gap-2 disabled:opacity-50">{isLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <>Enable two-factor authentication <BadgeCheck className="w-4 h-4" /></>}</button>
+                    </form>
+                  )}
+                </div>
+              )}
+
+              {mode === "mfaChallenge" && (
+                <form onSubmit={verifyAuthenticator} className="space-y-5">
+                  <label className="block"><span className="text-xs font-display font-bold uppercase tracking-[0.14em] text-muted-foreground mb-2 block">Authenticator code</span><div className="relative"><KeyRound className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" /><input name="mfa_code" data-sensitive="true" inputMode="numeric" autoComplete="one-time-code" value={mfaCode} onChange={(event) => setMfaCode(event.target.value.replace(/\D/g, "").slice(0, 6))} placeholder="000000" required minLength={6} maxLength={6} className={`${inputClass} tracking-[0.5em] font-mono text-lg`} /></div></label>
+                  <button type="submit" disabled={isLoading || mfaCode.length !== 6} className="w-full py-3.5 rounded-2xl bg-gradient-red text-white font-display font-bold flex items-center justify-center gap-2 disabled:opacity-50">{isLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <>Verify and continue <BadgeCheck className="w-4 h-4" /></>}</button>
+                </form>
+              )}
+
               {mode === "review" && (
                 <div className="space-y-3">
                   {reviewAccounts.map((account) => (
@@ -549,7 +709,7 @@ export default function Auth() {
             </motion.div>
           </AnimatePresence>
 
-          {mode !== "verify" && mode !== "staffOtpVerify" && (
+          {mode !== "verify" && mode !== "staffOtpVerify" && mode !== "contact" && mode !== "mfaEnroll" && mode !== "mfaChallenge" && (
             <div className="mt-8 pt-6 border-t border-border text-center text-sm text-muted-foreground">
               {mode === "staff" || mode === "forgot" || mode === "staffOtp" || mode === "review" ? (
                 <button onClick={() => setMode("student")} className="text-red-300 hover:text-red-200">Student sign in</button>

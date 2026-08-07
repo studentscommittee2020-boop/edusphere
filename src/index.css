@@ -117,6 +117,20 @@
     --sidebar-background: 0 0% 100%;
   }
 
+  /* Light mode keeps the same living atmosphere as dark mode, with enough
+     contrast to remain visible behind white surfaces. */
+  :root[data-theme="light"] .bg-mesh {
+    background:
+      radial-gradient(ellipse 80% 60% at 15% 20%, hsl(var(--red-600) / 0.20) 0%, transparent 60%),
+      radial-gradient(ellipse 70% 50% at 85% 80%, hsl(var(--green-600) / 0.16) 0%, transparent 60%);
+  }
+  :root[data-theme="light"] .bg-mesh-intense {
+    background:
+      radial-gradient(ellipse 80% 60% at 20% 25%, hsl(var(--red-600) / 0.28) 0%, transparent 60%),
+      radial-gradient(ellipse 70% 50% at 80% 75%, hsl(var(--green-600) / 0.21) 0%, transparent 60%),
+      radial-gradient(ellipse 50% 40% at 50% 0%, hsl(var(--accent-red-400) / 0.15) 0%, transparent 70%);
+  }
+
   * {
     @apply border-border;
   }
@@ -357,14 +371,31 @@
     -webkit-backdrop-filter: blur(16px) saturate(160%);
     border: 1px solid hsl(0 0% 100% / 0.07);
   }
+  :root[data-theme="light"] .bg-grid {
+    background-image:
+      linear-gradient(hsl(var(--foreground) / 0.065) 1px, transparent 1px),
+      linear-gradient(90deg, hsl(var(--foreground) / 0.065) 1px, transparent 1px);
+  }
+  :root[data-theme="light"] .bg-dots {
+    background-image: radial-gradient(hsl(var(--foreground) / 0.13) 1px, transparent 1px);
+  }
 
   @media (max-width: 1279px) {
     .bg-orb-red,
     .bg-orb-green,
-    .bg-orb-accent {
+  .bg-orb-accent {
       animation: none;
       filter: blur(64px);
     }
+  }
+  :root[data-theme="light"] .bg-orb-red {
+    background: radial-gradient(circle, hsl(var(--red-600) / 0.30) 0%, transparent 70%);
+  }
+  :root[data-theme="light"] .bg-orb-green {
+    background: radial-gradient(circle, hsl(var(--green-600) / 0.24) 0%, transparent 70%);
+  }
+  :root[data-theme="light"] .bg-orb-accent {
+    background: radial-gradient(circle, hsl(var(--accent-red-400) / 0.18) 0%, transparent 70%);
   }
 
   @media (max-width: 767px) {

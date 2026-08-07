@@ -69,6 +69,18 @@ function OwnerRoute({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
+/** A signed-in account must complete its authenticator-app challenge before
+    any authenticated portal screen is rendered. Public pages remain public. */
+function MfaGate({ children }: { children: React.ReactNode }) {
+  const { isAuthenticated, isLoading, isMfaVerified } = useAuth();
+  const location = useLocation();
+  if (isLoading) return <PageLoader />;
+  if (isAuthenticated && !isMfaVerified) {
+    return <Navigate to="/auth" replace state={{ next: location.pathname }} />;
+  }
+  return <>{children}</>;
+}
+
 /** Emits a page_view on every navigation. Must live inside the Router. */
 function RouteTelemetry() {
   const location = useLocation();
@@ -108,7 +120,7 @@ export default function App() {
           <Route path="/auth" element={<Auth />} />
 
           {/* Main app layout */}
-          <Route element={<Layout />}>
+          <Route element={<MfaGate><Layout /></MfaGate>}>
             <Route path="/"          element={<Index />} />
             <Route path="/sessions" element={<StudentRoute><Sessions /></StudentRoute>} />
             <Route path="/schedule" element={<StudentRoute><Schedule /></StudentRoute>} />

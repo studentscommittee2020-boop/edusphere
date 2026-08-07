@@ -30,6 +30,8 @@ interface AuthContextValue {
   isDoctor: boolean;
   isCommitteeAdmin: boolean;
   isVerifiedStudent: boolean;
+  /** True only after a verified authenticator-app factor upgrades the session to AAL2. */
+  isMfaVerified: boolean;
   isAuthenticated: boolean;
   signIn: (
     email: string,
@@ -82,6 +84,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isVerifiedStudent, setIsVerifiedStudent] = useState(
     devAccount?.isVerifiedStudent ?? false,
   );
+  const [isMfaVerified, setIsMfaVerified] = useState(!!devAccount);
 
   // ── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -137,6 +140,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             prof?.role === "committee_admin" ||
             sess.user.app_metadata?.student_verified === true,
         );
+        const { data: assurance } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+        setIsMfaVerified(assurance?.currentLevel === "aal2");
       } else {
         setUser(null);
         setSession(null);
@@ -148,6 +153,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setIsDoctor(false);
         setIsCommitteeAdmin(false);
         setIsVerifiedStudent(false);
+        setIsMfaVerified(false);
       }
       setIsLoading(false);
     },
@@ -282,6 +288,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     isDoctor,
     isCommitteeAdmin,
     isVerifiedStudent,
+    isMfaVerified,
     isAuthenticated: !!user || !!devAccount,
     signIn,
     signUp,
