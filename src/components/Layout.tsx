@@ -11,9 +11,9 @@ export default function Layout() {
   const [isDesktop, setIsDesktop] = useState(false);
 
   useEffect(() => {
-    // Tablets use the low-cost CSS backdrop. Reserve the WebGL scene for wide
-    // desktop screens where GPU budget and available space justify it.
-    const mq = window.matchMedia("(min-width: 1280px)");
+    // The full animated scene is part of the portal's visual identity. Keep it
+    // on tablets and desktops; only phones use the lightweight CSS fallback.
+    const mq = window.matchMedia("(min-width: 768px)");
     setIsDesktop(mq.matches);
     const handler = (event: MediaQueryListEvent) => setIsDesktop(event.matches);
     mq.addEventListener("change", handler);
@@ -22,7 +22,7 @@ export default function Layout() {
 
   return (
     <div className="min-h-screen bg-background relative">
-      {/* Desktop gets the WebGL scene; mobile gets CSS orbs at a fraction of
+      {/* Tablets and desktops get the WebGL scene; phones get CSS orbs at a fraction of
           the cost. Both are decorative — a WebGL failure must never take the
           page down, hence the boundary. */}
       {isDesktop ? (
