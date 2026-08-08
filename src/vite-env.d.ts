@@ -29,6 +29,8 @@ interface ImportMetaEnv {
   readonly VITE_POSTHOG_KEY?: string;
   /** Regional PostHog ingestion host, e.g. https://eu.i.posthog.com. */
   readonly VITE_POSTHOG_HOST?: string;
+  /** Temporary Vercel Preview-only bypass for prepared staff review accounts. */
+  readonly VITE_REVIEW_PHONE_BYPASS?: string;
 }
 
 interface ImportMeta {

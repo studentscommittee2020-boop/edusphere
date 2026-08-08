@@ -202,7 +202,12 @@ export default function Profile() {
 
   return (
     <div className="max-w-5xl mx-auto px-4 sm:px-6 py-8 space-y-6">
-      <button type="button" onClick={() => window.history.length > 1 ? navigate(-1) : navigate("/")} className="inline-flex min-h-11 items-center gap-2 rounded-xl px-3 text-sm font-display font-semibold text-muted-foreground transition hover:bg-muted hover:text-foreground"><ArrowLeft className="w-4 h-4" />{isFr ? "Retour" : "Back"}</button>
+      <nav className="flex items-center justify-between border-b border-border/70 pb-4" aria-label={isFr ? "Navigation du profil" : "Profile navigation"}>
+        <button type="button" onClick={() => window.history.length > 1 ? navigate(-1) : navigate("/")} className="group inline-flex min-h-11 items-center gap-2 rounded-full border border-border bg-card/70 py-1.5 pl-1.5 pr-4 text-sm font-display font-semibold text-muted-foreground shadow-sm transition hover:border-primary/40 hover:bg-primary/5 hover:text-foreground">
+          <span className="flex size-8 items-center justify-center rounded-full bg-muted transition group-hover:bg-primary/15"><ArrowLeft className="size-4" /></span>{isFr ? "Retour au portail" : "Back to portal"}
+        </button>
+        <span className="hidden text-xs font-display font-bold uppercase tracking-[0.14em] text-muted-foreground sm:inline">{isFr ? "Paramètres du compte" : "Account settings"}</span>
+      </nav>
       {/* Header */}
       <div className="flex items-center gap-4">
         <div className="w-16 h-16 rounded-2xl bg-gradient-red flex items-center justify-center shrink-0">

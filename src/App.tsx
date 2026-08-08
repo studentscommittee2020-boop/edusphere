@@ -78,12 +78,11 @@ function MfaGate({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, isLoading, isMfaVerified, profile, isAdmin, isOwner, isDoctor, isCommitteeAdmin } = useAuth();
   const location = useLocation();
   if (isLoading) return <PageLoader />;
-  // Development-only staff/dean bypass: the phone input remains visible in
-  // Profile, but local test accounts can reach their workspaces faster. This
-  // branch is removed from production builds, where every role requires a
-  // phone number alongside MFA.
+  // Prepared staff review accounts can omit the phone only in local dev or a
+  // deliberately configured review build. Production remains mandatory.
   const isStaffAccount = isAdmin || isOwner || isDoctor || isCommitteeAdmin;
-  const phoneIsRequired = !import.meta.env.DEV || !isStaffAccount;
+  const reviewPhoneBypass = import.meta.env.DEV || import.meta.env.VITE_REVIEW_PHONE_BYPASS === "true";
+  const phoneIsRequired = !reviewPhoneBypass || !isStaffAccount;
   if (isAuthenticated && (!isMfaVerified || (phoneIsRequired && !profile?.phone))) {
     return <Navigate to="/auth" replace state={{ next: location.pathname }} />;
   }

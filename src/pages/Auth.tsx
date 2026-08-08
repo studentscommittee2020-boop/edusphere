@@ -40,6 +40,7 @@ type ReviewAccount = {
 // account still signs in through Supabase with its password and receives its
 // normal server-enforced permissions. Remove after the dean review.
 const mockReviewEnabled = true;
+const reviewPhoneBypass = import.meta.env.DEV || import.meta.env.VITE_REVIEW_PHONE_BYPASS === "true";
 
 const reviewAccounts: ReviewAccount[] = [
   { label: "Mock owner", email: "review-owner@edusphere.local", description: "Full owner console and audit access" },
@@ -167,7 +168,7 @@ export default function Auth() {
   /** Local-only shortcut for prepared dean/staff review accounts. Production
       always collects the required profile phone before the MFA challenge. */
   async function isDevelopmentStaffAccount(): Promise<boolean> {
-    if (!import.meta.env.DEV) return false;
+    if (!reviewPhoneBypass) return false;
     const { data: { user: activeUser } } = await supabase.auth.getUser();
     if (!activeUser) return false;
     const [profileResult, adminResult, ownerResult] = await Promise.all([
@@ -420,13 +421,6 @@ export default function Auth() {
       >
         <button
           type="button"
-          onClick={() => window.history.length > 1 ? navigate(-1) : navigate("/")}
-          className="absolute left-5 top-5 z-20 inline-flex min-h-11 items-center gap-1.5 rounded-xl border border-border bg-background/80 px-3 text-sm font-display font-semibold text-foreground transition-colors hover:bg-muted"
-        >
-          <ArrowLeft className="h-4 w-4" /> Back
-        </button>
-        <button
-          type="button"
           onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
           className="absolute right-5 top-5 z-20 rounded-xl border border-border bg-background/80 p-2 text-foreground transition-colors hover:bg-muted"
           aria-label={`Switch to ${theme === "dark" ? "light" : "dark"} mode`}
@@ -576,8 +570,8 @@ export default function Auth() {
                   </label>
                   <label className="block">
                     <span className="text-xs font-display font-bold uppercase tracking-[0.14em] text-muted-foreground mb-2 block">Mobile number</span>
-                    <div className="relative"><Smartphone className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" /><input name="phone" data-sensitive="true" type="tel" inputMode="tel" autoComplete="tel" value={phone} onChange={(event) => setPhone(event.target.value)} placeholder="+961 70 123 456" required={!import.meta.env.DEV} className={inputClass} /></div>
-                    {import.meta.env.DEV && <p className="mt-2 text-xs text-muted-foreground">Optional for local staff/dean testing. Required in production.</p>}
+                    <div className="relative"><Smartphone className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" /><input name="phone" data-sensitive="true" type="tel" inputMode="tel" autoComplete="tel" value={phone} onChange={(event) => setPhone(event.target.value)} placeholder="+961 70 123 456" required={!reviewPhoneBypass} className={inputClass} /></div>
+                    {reviewPhoneBypass && <p className="mt-2 text-xs text-muted-foreground">Optional in this temporary review build. Required in production.</p>}
                   </label>
                   <label className="block">
                     <span className="text-xs font-display font-bold uppercase tracking-[0.14em] text-muted-foreground mb-2 block">Password</span>
@@ -615,8 +609,8 @@ export default function Auth() {
                   </label>
                   <label className="block">
                     <span className="text-xs font-display font-bold uppercase tracking-[0.14em] text-muted-foreground mb-2 block">Mobile number</span>
-                    <div className="relative"><Smartphone className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" /><input name="phone" data-sensitive="true" type="tel" inputMode="tel" autoComplete="tel" value={phone} onChange={(event) => setPhone(event.target.value)} placeholder="+961 70 123 456" required={!import.meta.env.DEV} className={inputClass} /></div>
-                    {import.meta.env.DEV && <p className="mt-2 text-xs text-muted-foreground">Optional for local staff/dean testing. Required in production.</p>}
+                    <div className="relative"><Smartphone className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" /><input name="phone" data-sensitive="true" type="tel" inputMode="tel" autoComplete="tel" value={phone} onChange={(event) => setPhone(event.target.value)} placeholder="+961 70 123 456" required={!reviewPhoneBypass} className={inputClass} /></div>
+                    {reviewPhoneBypass && <p className="mt-2 text-xs text-muted-foreground">Optional in this temporary review build. Required in production.</p>}
                   </label>
                   <p className="text-xs leading-5 text-muted-foreground">
                     {t(
