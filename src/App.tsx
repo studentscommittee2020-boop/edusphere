@@ -75,14 +75,20 @@ function OwnerRoute({ children }: { children: React.ReactNode }) {
 /** A signed-in account must complete its authenticator-app challenge before
     any authenticated portal screen is rendered. Public pages remain public. */
 function MfaGate({ children }: { children: React.ReactNode }) {
-  const { isAuthenticated, isLoading, isMfaVerified, profile, isAdmin, isOwner, isDoctor, isCommitteeAdmin } = useAuth();
+  const { user, isAuthenticated, isLoading, isMfaVerified, profile, isAdmin, isOwner, isDoctor, isCommitteeAdmin } = useAuth();
   const location = useLocation();
   if (isLoading) return <PageLoader />;
   // Prepared staff review accounts can omit the phone only in local dev or a
   // deliberately configured review build. Production remains mandatory.
   const isStaffAccount = isAdmin || isOwner || isDoctor || isCommitteeAdmin;
   const reviewPhoneBypass = import.meta.env.DEV || import.meta.env.VITE_REVIEW_PHONE_BYPASS === "true";
-  const phoneIsRequired = !reviewPhoneBypass || !isStaffAccount;
+  const isPreparedReviewAccount = [
+    "review-owner@edusphere.local",
+    "review-admin@edusphere.local",
+    "review-committee@edusphere.local",
+    "review-doctor@edusphere.local",
+  ].includes(user?.email?.toLowerCase() ?? "");
+  const phoneIsRequired = !(reviewPhoneBypass && isStaffAccount && isPreparedReviewAccount);
   if (isAuthenticated && (!isMfaVerified || (phoneIsRequired && !profile?.phone))) {
     return <Navigate to="/auth" replace state={{ next: location.pathname }} />;
   }

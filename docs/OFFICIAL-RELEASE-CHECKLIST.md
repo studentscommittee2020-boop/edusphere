@@ -2,13 +2,13 @@
 
 ## Temporary reviewer access — remove at approval
 
-`VITE_REVIEW_PHONE_BYPASS=true` is configured in **Vercel Preview only** so
-prepared dean/staff review accounts can test the portal without entering a
-phone number. Production remains phone-mandatory for every role.
+`VITE_REVIEW_PHONE_BYPASS=true` is temporarily configured for prepared
+dean/staff review accounts only. The code allow-lists the four review emails;
+all other accounts remain phone-mandatory.
 
 When the site is officially approved:
 
-1. In Vercel, remove `VITE_REVIEW_PHONE_BYPASS` from the Preview environment.
+1. In Vercel, remove `VITE_REVIEW_PHONE_BYPASS` from every environment.
 2. Confirm no deployment has the variable set to `true`.
 3. Delete the development/review bypass code in `src/App.tsx` and
    `src/pages/Auth.tsx`, then deploy the removal to `main`.

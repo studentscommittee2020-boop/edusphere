@@ -16,6 +16,8 @@ import {
   ShieldCheck,
   Sun,
   Smartphone,
+  Eye,
+  EyeOff,
 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/lib/supabase";
@@ -48,6 +50,10 @@ const reviewAccounts: ReviewAccount[] = [
   { label: "Student council", email: "review-committee@edusphere.local", description: "Council book upload and replacement review" },
   { label: "Dr. Review", email: "review-doctor@edusphere.local", description: "Assigned course-book confirmation or replacement" },
 ];
+
+function isPreparedReviewEmail(email: string | null | undefined): boolean {
+  return reviewAccounts.some((account) => account.email === email?.trim().toLowerCase());
+}
 
 const inputClass =
   "w-full pl-11 pr-4 py-3.5 bg-input border border-border rounded-2xl text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:ring-2 focus:ring-red-500/40 focus:border-red-500/60 transition-all";
@@ -156,6 +162,7 @@ export default function Auth() {
   const [otp, setOtp] = useState("");
   const [staffCode, setStaffCode] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [phone, setPhone] = useState("");
   const [mfaCode, setMfaCode] = useState("");
   const [mfaFactorId, setMfaFactorId] = useState("");
@@ -167,10 +174,10 @@ export default function Auth() {
 
   /** Local-only shortcut for prepared dean/staff review accounts. Production
       always collects the required profile phone before the MFA challenge. */
-  async function isDevelopmentStaffAccount(): Promise<boolean> {
+  async function isPreparedReviewAccount(): Promise<boolean> {
     if (!reviewPhoneBypass) return false;
     const { data: { user: activeUser } } = await supabase.auth.getUser();
-    if (!activeUser) return false;
+    if (!activeUser || !isPreparedReviewEmail(activeUser.email)) return false;
     const [profileResult, adminResult, ownerResult] = await Promise.all([
       supabase.from("profiles").select("role").eq("id", activeUser.id).single(),
       supabase.rpc("is_admin"),
@@ -220,7 +227,7 @@ export default function Auth() {
   }
 
   async function continueStaffAuthentication(): Promise<boolean> {
-    if (await isDevelopmentStaffAccount()) {
+    if (await isPreparedReviewAccount()) {
       await refreshProfile();
       await beginMfaFlow();
       return true;
@@ -231,7 +238,7 @@ export default function Auth() {
   useEffect(() => {
     if (!user) return;
     supabase.from("profiles").select("phone").eq("id", user.id).single().then(async ({ data }) => {
-      if (!data?.phone && !(await isDevelopmentStaffAccount())) {
+      if (!data?.phone && !(await isPreparedReviewAccount())) {
         setMode("contact");
         return;
       }
@@ -570,12 +577,12 @@ export default function Auth() {
                   </label>
                   <label className="block">
                     <span className="text-xs font-display font-bold uppercase tracking-[0.14em] text-muted-foreground mb-2 block">Mobile number</span>
-                    <div className="relative"><Smartphone className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" /><input name="phone" data-sensitive="true" type="tel" inputMode="tel" autoComplete="tel" value={phone} onChange={(event) => setPhone(event.target.value)} placeholder="+961 70 123 456" required={!reviewPhoneBypass} className={inputClass} /></div>
-                    {reviewPhoneBypass && <p className="mt-2 text-xs text-muted-foreground">Optional in this temporary review build. Required in production.</p>}
+                    <div className="relative"><Smartphone className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" /><input name="phone" data-sensitive="true" type="tel" inputMode="tel" autoComplete="tel" value={phone} onChange={(event) => setPhone(event.target.value)} placeholder="+961 70 123 456" required={!(reviewPhoneBypass && isPreparedReviewEmail(email))} className={inputClass} /></div>
+                    {reviewPhoneBypass && isPreparedReviewEmail(email) && <p className="mt-2 text-xs text-muted-foreground">Optional for this prepared review account only.</p>}
                   </label>
                   <label className="block">
                     <span className="text-xs font-display font-bold uppercase tracking-[0.14em] text-muted-foreground mb-2 block">Password</span>
-                    <div className="relative"><Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" /><input type="password" value={password} onChange={(event) => setPassword(event.target.value)} required className={inputClass} /></div>
+                    <div className="relative"><Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" /><input type={showPassword ? "text" : "password"} value={password} onChange={(event) => setPassword(event.target.value)} required className={`${inputClass} pr-12`} /><button type="button" onClick={() => setShowPassword((visible) => !visible)} className="absolute right-2 top-1/2 flex size-9 -translate-y-1/2 items-center justify-center rounded-xl text-muted-foreground transition hover:bg-muted hover:text-foreground" aria-label={showPassword ? "Hide password" : "Show password"}>{showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}</button></div>
                   </label>
                   <div className="text-right"><button type="button" onClick={() => setMode("forgot")} className="text-sm text-red-300 hover:text-red-200">Forgot password?</button></div>
                   <button type="submit" disabled={isLoading} className="w-full py-3.5 rounded-2xl bg-white text-neutral-950 font-display font-bold flex items-center justify-center gap-2 transition hover:bg-neutral-200 disabled:opacity-50">
@@ -609,8 +616,8 @@ export default function Auth() {
                   </label>
                   <label className="block">
                     <span className="text-xs font-display font-bold uppercase tracking-[0.14em] text-muted-foreground mb-2 block">Mobile number</span>
-                    <div className="relative"><Smartphone className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" /><input name="phone" data-sensitive="true" type="tel" inputMode="tel" autoComplete="tel" value={phone} onChange={(event) => setPhone(event.target.value)} placeholder="+961 70 123 456" required={!reviewPhoneBypass} className={inputClass} /></div>
-                    {reviewPhoneBypass && <p className="mt-2 text-xs text-muted-foreground">Optional in this temporary review build. Required in production.</p>}
+                    <div className="relative"><Smartphone className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" /><input name="phone" data-sensitive="true" type="tel" inputMode="tel" autoComplete="tel" value={phone} onChange={(event) => setPhone(event.target.value)} placeholder="+961 70 123 456" required={!(reviewPhoneBypass && isPreparedReviewEmail(email))} className={inputClass} /></div>
+                    {reviewPhoneBypass && isPreparedReviewEmail(email) && <p className="mt-2 text-xs text-muted-foreground">Optional for this prepared review account only.</p>}
                   </label>
                   <p className="text-xs leading-5 text-muted-foreground">
                     {t(
