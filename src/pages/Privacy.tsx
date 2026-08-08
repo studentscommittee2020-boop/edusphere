@@ -1,230 +1,102 @@
 import { motion } from "framer-motion";
-import { Cookie, Database, Eye, Server, ShieldOff } from "lucide-react";
+import { BarChart3, Cookie, Database, Server, ShieldCheck } from "lucide-react";
 import { useAppStore } from "@/store/appStore";
+import { denyAnalyticsConsent, grantAnalyticsConsent, hasAnalyticsConsent } from "@/lib/posthog";
+import { clearTelemetryState, track } from "@/lib/telemetry";
 
-/**
- * Plain-language disclosure of what the site collects.
- *
- * EduSphere collects telemetry unconditionally — there is no consent banner.
- * That makes an honest, specific disclosure the only thing standing between
- * the product and its users, so this page names every cookie and every
- * category of data rather than gesturing at "analytics".
- */
 export default function Privacy() {
   const { language } = useAppStore();
   const isFr = language === "fr";
+  const analyticsAllowed = hasAnalyticsConsent();
 
   const sections = [
     {
       icon: Cookie,
-      titleEn: "Cookies we set",
-      titleFr: "Cookies déposés",
-      bodyEn: (
-        <>
-          <p>
-            EduSphere sets cookies as soon as the site loads. There is no consent
-            banner and no opt-out inside the app — if you do not want these,
-            block them in your browser or use private browsing.
-          </p>
-          <ul>
-            <li>
-              <code>es_aid</code> — a random anonymous identifier, kept for one
-              year. It links your visits together even when you are signed out.
-            </li>
-            <li>
-              <code>es_sid</code> — a random session identifier, kept for 30
-              minutes of inactivity. It groups one browsing session.
-            </li>
-            <li>
-              <code>sb-*</code> — Supabase authentication cookies. These keep you
-              signed in and are required for the site to work at all.
-            </li>
-          </ul>
-        </>
-      ),
-      bodyFr: (
-        <>
-          <p>
-            EduSphere dépose des cookies dès le chargement du site. Il n'y a ni
-            bandeau de consentement ni refus possible dans l'application — pour
-            les éviter, bloquez-les dans votre navigateur ou utilisez la
-            navigation privée.
-          </p>
-          <ul>
-            <li>
-              <code>es_aid</code> — identifiant anonyme aléatoire, conservé un
-              an. Il relie vos visites même déconnecté.
-            </li>
-            <li>
-              <code>es_sid</code> — identifiant de session aléatoire, conservé 30
-              minutes d'inactivité.
-            </li>
-            <li>
-              <code>sb-*</code> — cookies d'authentification Supabase,
-              indispensables au fonctionnement du site.
-            </li>
-          </ul>
-        </>
-      ),
+      titleEn: "Your choice",
+      titleFr: "Votre choix",
+      bodyEn: "Optional product analytics are off until you choose Allow analytics. Essential Supabase authentication storage is still used to keep an authenticated session working.",
+      bodyFr: "Les analyses facultatives sont désactivées tant que vous ne choisissez pas Autoriser les analyses. Le stockage d'authentification Supabase indispensable reste utilisé pour maintenir votre session.",
+    },
+    {
+      icon: BarChart3,
+      titleEn: "Limited product analytics",
+      titleFr: "Analyses produit limitées",
+      bodyEn: "If you opt in, EduSphere records curated product events such as page views and feature use in our first-party telemetry and PostHog. Automatic click capture, form capture, and session replay are disabled.",
+      bodyFr: "Si vous acceptez, EduSphere enregistre des événements produit sélectionnés, comme les pages visitées et l'usage des fonctionnalités, dans notre télémétrie interne et PostHog. La capture automatique des clics, des formulaires et la relecture de session sont désactivées.",
+    },
+    {
+      icon: ShieldCheck,
+      titleEn: "What never enters analytics",
+      titleFr: "Ce qui n'entre jamais dans les analyses",
+      bodyEn: "We do not send student file numbers, one-time codes, passwords, phone numbers, email addresses, uploaded documents, assignment content, or university API responses to analytics. Your file number is used only in memory to verify eligibility, then discarded.",
+      bodyFr: "Nous n'envoyons jamais aux analyses les numéros de dossier, codes à usage unique, mots de passe, numéros de téléphone, adresses e-mail, documents déposés, contenu des devoirs ou réponses de l'API universitaire. Votre numéro de dossier sert seulement en mémoire à vérifier votre éligibilité, puis est supprimé.",
     },
     {
       icon: Database,
-      titleEn: "What we record",
-      titleFr: "Ce que nous enregistrons",
-      bodyEn: (
-        <ul>
-          <li>Every page you visit, and when.</li>
-          <li>Which resources, exams and materials you open.</li>
-          <li>Your browser, language, timezone, screen and window size.</li>
-          <li>The page that referred you to us.</li>
-          <li>Your account id, once you are signed in.</li>
-          <li>Your required contact phone number, stored in normalized international format.</li>
-        </ul>
-      ),
-      bodyFr: (
-        <ul>
-          <li>Chaque page visitée, et quand.</li>
-          <li>Les ressources, examens et supports que vous ouvrez.</li>
-          <li>Votre navigateur, langue, fuseau horaire et taille d'écran.</li>
-          <li>La page qui vous a amené ici.</li>
-          <li>L'identifiant de votre compte, une fois connecté.</li>
-        </ul>
-      ),
-    },
-    {
-      icon: Eye,
-      titleEn: "Session recording",
-      titleFr: "Enregistrement de session",
-      bodyEn: (
-        <p>
-          We use Sentry Session Replay, which reconstructs what happened on
-          screen — pages, clicks, scrolling and typed text — so we can diagnose
-          errors. Password fields, phone numbers, and one-time codes are excluded
-          from recording and are never captured.
-        </p>
-      ),
-      bodyFr: (
-        <p>
-          Nous utilisons Sentry Session Replay, qui reconstitue ce qui s'est
-          passé à l'écran — pages, clics, défilement et texte saisi — afin de
-          diagnostiquer les erreurs. Les champs de mot de passe et les codes à
-          usage unique sont exclus et ne sont jamais capturés.
-        </p>
-      ),
-    },
-    {
-      icon: ShieldOff,
-      titleEn: "What we never store",
-      titleFr: "Ce que nous ne stockons jamais",
-      bodyEn: (
-        <p>
-          Your university <strong>file number</strong> is never written to our
-          database, never logged, and never sent to Sentry. It is used in memory
-          to ask the university whether you are a registered student, then
-          discarded. That is also why refreshing your schedule asks for it again
-          each time — we have nothing stored to reuse. Neither are the raw
-          responses the university sends us.
-        </p>
-      ),
-      bodyFr: (
-        <p>
-          Votre <strong>numéro de dossier</strong> universitaire n'est jamais
-          écrit dans notre base, jamais journalisé, jamais envoyé à Sentry. Il
-          sert en mémoire à demander à l'université si vous êtes bien inscrit,
-          puis il est effacé. C'est aussi pourquoi l'actualisation de votre
-          emploi du temps le redemande à chaque fois. Les réponses brutes de
-          l'université ne sont pas conservées non plus.
-        </p>
-      ),
+      titleEn: "Diagnostics",
+      titleFr: "Diagnostics",
+      bodyEn: "Sentry receives limited error and performance diagnostics when configured. It receives an opaque account id after sign-in, not your email or phone. Session Replay is disabled.",
+      bodyFr: "Sentry reçoit des diagnostics limités d'erreur et de performance lorsqu'il est configuré. Après connexion, il reçoit un identifiant de compte opaque, jamais votre e-mail ni votre téléphone. La relecture de session est désactivée.",
     },
     {
       icon: Server,
-      titleEn: "Who can see it",
-      titleFr: "Qui peut y accéder",
-      bodyEn: (
-        <p>
-          Telemetry is readable only by the system owner. Ordinary
-          administrators cannot read it, and you cannot read other students'
-          records — the database enforces this, not the interface. Owner actions
-          on your data are written to an audit trail that the owner cannot edit
-          or delete.
-        </p>
-      ),
-      bodyFr: (
-        <p>
-          Les données de télémétrie ne sont lisibles que par le propriétaire du
-          système. Les administrateurs ordinaires n'y ont pas accès, et vous ne
-          pouvez pas lire les données d'autres étudiants — c'est la base de
-          données qui l'impose, pas l'interface. Les actions du propriétaire sur
-          vos données sont inscrites dans un journal qu'il ne peut ni modifier
-          ni supprimer.
-        </p>
-      ),
+      titleEn: "Access and protection",
+      titleFr: "Accès et protection",
+      bodyEn: "First-party telemetry is restricted to the system owner by database policies. PostHog is a separate analytics processor and is configured only after you choose a data region. Analytics cannot grant access to documents, assignments, or accounts.",
+      bodyFr: "La télémétrie interne est réservée au propriétaire du système par les politiques de base de données. PostHog est un processeur d'analyses distinct et n'est configuré qu'après le choix d'une région de données. Les analyses ne peuvent donner accès ni aux documents, ni aux devoirs, ni aux comptes.",
     },
   ];
 
+  const revoke = () => {
+    denyAnalyticsConsent();
+    clearTelemetryState();
+    window.location.reload();
+  };
+
+  const enable = () => {
+    grantAnalyticsConsent();
+    track("analytics_consent_granted");
+    window.location.reload();
+  };
+
   return (
-    <div className="px-4 sm:px-6 lg:px-10 py-8 lg:py-12 max-w-3xl mx-auto space-y-8">
-      <motion.header
-        initial={{ opacity: 0, y: 12 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4 }}
-      >
-        <span className="eyebrow">
-          <Cookie className="w-3.5 h-3.5" />
-          {isFr ? "Transparence" : "Transparency"}
-        </span>
-        <h1 className="mt-2 font-display font-extrabold text-3xl lg:text-4xl text-gradient-chrome">
-          {isFr ? "Confidentialité" : "Privacy"}
-        </h1>
-        <p className="mt-3 text-sm text-muted-foreground leading-relaxed">
-          {isFr
-            ? "Ce site collecte des données d'utilisation sans vous demander votre accord. Plutôt que de le dissimuler derrière un bandeau, voici exactement ce qui est collecté."
-            : "This site collects usage data without asking for your consent. Rather than hide that behind a banner, here is exactly what is collected."}
+    <div className="mx-auto max-w-3xl space-y-8 px-4 py-8 sm:px-6 lg:px-10 lg:py-12">
+      <motion.header initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
+        <span className="eyebrow"><Cookie className="size-3.5" />{isFr ? "Transparence" : "Transparency"}</span>
+        <h1 className="mt-2 font-display text-3xl font-extrabold text-gradient-chrome lg:text-4xl">{isFr ? "Confidentialité" : "Privacy"}</h1>
+        <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
+          {isFr ? "Vos analyses produit sont facultatives et contrôlées par un choix clair." : "Product analytics are optional and controlled by a clear choice."}
         </p>
       </motion.header>
 
       <div className="rule-glow" />
 
+      <section className="surface flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between sm:p-6">
+        <div>
+          <h2 className="font-display text-lg font-bold text-foreground">{isFr ? "Préférence d'analyses" : "Analytics preference"}</h2>
+          <p className="mt-1 text-sm text-muted-foreground">{analyticsAllowed ? (isFr ? "Les analyses facultatives sont actuellement autorisées." : "Optional analytics are currently allowed.") : (isFr ? "Seuls les services essentiels sont actuellement autorisés." : "Only essential services are currently allowed.")}</p>
+        </div>
+        {analyticsAllowed ? (
+          <button type="button" onClick={revoke} className="btn-ghost min-h-11 px-4 text-sm">{isFr ? "Retirer l'accord" : "Withdraw consent"}</button>
+        ) : (
+          <button type="button" onClick={enable} className="btn-primary min-h-11 px-4 text-sm">{isFr ? "Autoriser les analyses" : "Allow analytics"}</button>
+        )}
+      </section>
+
       <div className="space-y-4">
         {sections.map((section, index) => {
           const Icon = section.icon;
           return (
-            <motion.section
-              key={section.titleEn}
-              initial={{ opacity: 0, y: 12 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: index * 0.06, duration: 0.35 }}
-              className="surface p-5 sm:p-6"
-            >
-              <div className="flex items-center gap-3 mb-3">
-                <span className="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
-                  <Icon className="w-4.5 h-4.5 text-primary" />
-                </span>
-                <h2 className="font-display font-bold text-lg text-foreground">
-                  {isFr ? section.titleFr : section.titleEn}
-                </h2>
+            <motion.section key={section.titleEn} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: index * 0.06, duration: 0.35 }} className="surface p-5 sm:p-6">
+              <div className="mb-3 flex items-center gap-3">
+                <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-primary/10"><Icon className="size-4.5 text-primary" /></span>
+                <h2 className="font-display text-lg font-bold text-foreground">{isFr ? section.titleFr : section.titleEn}</h2>
               </div>
-
-              <div
-                className="text-sm text-muted-foreground leading-relaxed space-y-2
-                  [&_ul]:space-y-1.5 [&_ul]:pl-4 [&_li]:list-disc [&_li]:marker:text-primary/60
-                  [&_code]:font-mono [&_code]:text-xs [&_code]:px-1.5 [&_code]:py-0.5
-                  [&_code]:rounded [&_code]:bg-white/[0.07] [&_code]:text-foreground
-                  [&_strong]:text-foreground"
-              >
-                {isFr ? section.bodyFr : section.bodyEn}
-              </div>
+              <p className="text-sm leading-relaxed text-muted-foreground">{isFr ? section.bodyFr : section.bodyEn}</p>
             </motion.section>
           );
         })}
       </div>
-
-      <p className="text-xs text-muted-foreground text-center pt-4">
-        {isFr
-          ? "Des questions ? Contactez le comité étudiant."
-          : "Questions? Contact the student committee."}
-      </p>
     </div>
   );
 }

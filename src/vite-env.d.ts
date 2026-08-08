@@ -25,6 +25,10 @@ interface ImportMetaEnv {
   /** Fraction of ordinary sessions replayed, 0–1. Errors always replay. */
   readonly VITE_SENTRY_REPLAY_SAMPLE_RATE?: string;
   readonly VITE_APP_VERSION?: string;
+  /** PostHog project token. Omit this (or the host) to leave product analytics inert. */
+  readonly VITE_POSTHOG_KEY?: string;
+  /** Regional PostHog ingestion host, e.g. https://eu.i.posthog.com. */
+  readonly VITE_POSTHOG_HOST?: string;
 }
 
 interface ImportMeta {

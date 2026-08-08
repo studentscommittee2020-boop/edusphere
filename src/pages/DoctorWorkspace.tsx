@@ -20,6 +20,27 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useAppStore } from "@/store/appStore";
 import { cn } from "@/lib/utils";
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
   createAssignment,
   createPrintDocument,
   getAssignmentSubmissions,
@@ -105,6 +126,7 @@ export default function DoctorWorkspace() {
   const [allowLate, setAllowLate] = useState(false);
   const [reviewDrafts, setReviewDrafts] = useState<Record<string, ReviewDraft>>({});
   const [reviewingSubmissionId, setReviewingSubmissionId] = useState<string | null>(null);
+  const [activeReviewSubmissionId, setActiveReviewSubmissionId] = useState<string | null>(null);
   const [openingSubmissionId, setOpeningSubmissionId] = useState<string | null>(null);
   const [isCourseSetupOpen, setIsCourseSetupOpen] = useState(false);
   const [submitting, setSubmitting] = useState<"document" | "assignment" | "material" | "exam" | null>(
@@ -217,7 +239,6 @@ export default function DoctorWorkspace() {
   }
 
   async function removeMaterial(material: MaterialWithCourse) {
-    if (!window.confirm(`Delete "${material.title}"? Students will lose access immediately.`)) return;
     const { error } = await deleteMaterial(material);
     if (error) { toast.error("Could not delete that material."); return; }
     toast.success("Material deleted.");
@@ -273,6 +294,7 @@ export default function DoctorWorkspace() {
       return;
     }
     toast.success(draft.status === "graded" ? "Grade shared with the student." : "Submission returned to the student.");
+    setActiveReviewSubmissionId(null);
     await load();
   }
 
@@ -558,22 +580,22 @@ export default function DoctorWorkspace() {
             <form onSubmit={submitAssignment} className="space-y-4 mt-6">
               <label className="block">
                 <span className="text-xs text-muted-foreground block mb-2">Active teaching course</span>
-                <select
+                <Select
                   value={assignmentCourseId}
-                  onChange={(event) => setAssignmentCourseId(event.target.value)}
-                  required
+                  onValueChange={setAssignmentCourseId}
                   disabled={taughtCourses.length === 0}
-                  className={inputClass}
                 >
-                  <option value="">
-                    {taughtCourses.length === 0 ? "No active teaching courses" : "Select an active teaching course…"}
-                  </option>
-                  {taughtCourses.map((course) => (
-                    <option key={course.id} value={course.id}>
-                      {course.code ? course.code + " · " : ""}{courseTitle(course)} ({course.semester})
-                    </option>
-                  ))}
-                </select>
+                  <SelectTrigger className="h-12 w-full rounded-xl border-border bg-input px-4 text-foreground" aria-label="Active teaching course">
+                    <SelectValue placeholder={taughtCourses.length === 0 ? "No active teaching courses" : "Select an active teaching course…"} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {taughtCourses.map((course) => (
+                      <SelectItem key={course.id} value={course.id}>
+                        {course.code ? course.code + " · " : ""}{courseTitle(course)} ({course.semester})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </label>
               <input
                 value={assignmentTitle}
@@ -683,14 +705,7 @@ export default function DoctorWorkspace() {
                           const draft = reviewDrafts[submission.id] ?? defaultReviewDraft(submission);
                           const isReviewing = reviewingSubmissionId === submission.id;
                           return (
-                            <form
-                              key={submission.id}
-                              onSubmit={(event) => {
-                                event.preventDefault();
-                                void submitReview(submission);
-                              }}
-                              className="rounded-xl border border-border bg-surface-1/60 p-4"
-                            >
+                            <article key={submission.id} className="rounded-xl border border-border bg-surface-1/60 p-4">
                               <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                                 <div className="min-w-0">
                                   <p className="text-sm font-medium text-foreground truncate">{submission.original_name}</p>
@@ -705,69 +720,36 @@ export default function DoctorWorkspace() {
                               {submission.message && (
                                 <p className="text-sm text-muted-foreground mt-3 whitespace-pre-wrap">{submission.message}</p>
                               )}
-                              <button
-                                type="button"
-                                onClick={() => void openSubmittedPdf(submission)}
-                                disabled={openingSubmissionId === submission.id}
-                                className="mt-3 inline-flex items-center gap-2 rounded-xl border border-border px-4 py-2.5 text-sm font-display font-bold text-foreground transition-colors hover:bg-white/[0.06] disabled:cursor-wait disabled:opacity-50"
-                              >
-                                {openingSubmissionId === submission.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileText className="w-4 h-4" />}
-                                Open submitted PDF
-                              </button>
-                              <div className="grid gap-3 sm:grid-cols-3 mt-4">
-                                <label className="block">
-                                  <span className="text-xs text-muted-foreground block mb-1.5">Decision</span>
-                                  <select
-                                    value={draft.status}
-                                    onChange={(event) => setReviewDrafts((current) => ({
-                                      ...current,
-                                      [submission.id]: { ...draft, status: event.target.value as ReviewStatus },
-                                    }))}
-                                    className={inputClass}
-                                  >
-                                    <option value="graded">Grade and share</option>
-                                    <option value="returned">Return for revision</option>
-                                  </select>
-                                </label>
-                                <label className="block">
-                                  <span className="text-xs text-muted-foreground block mb-1.5">Grade (0–100)</span>
-                                  <input
-                                    type="number"
-                                    min="0"
-                                    max="100"
-                                    step="0.01"
-                                    value={draft.grade}
-                                    disabled={draft.status !== "graded"}
-                                    onChange={(event) => setReviewDrafts((current) => ({
-                                      ...current,
-                                      [submission.id]: { ...draft, grade: event.target.value },
-                                    }))}
-                                    className={inputClass}
-                                  />
-                                </label>
-                                <label className="block">
-                                  <span className="text-xs text-muted-foreground block mb-1.5">Feedback</span>
-                                  <input
-                                    value={draft.feedback}
-                                    maxLength={4000}
-                                    onChange={(event) => setReviewDrafts((current) => ({
-                                      ...current,
-                                      [submission.id]: { ...draft, feedback: event.target.value },
-                                    }))}
-                                    placeholder="Feedback for the student"
-                                    className={inputClass}
-                                  />
-                                </label>
-                              </div>
-                              <button
-                                type="submit"
-                                disabled={isReviewing}
-                                className="mt-3 px-4 py-2.5 rounded-xl bg-gradient-red text-white text-sm font-display font-bold inline-flex items-center gap-2 disabled:opacity-50"
-                              >
-                                {isReviewing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
-                                {draft.status === "graded" ? "Save grade" : "Return submission"}
-                              </button>
-                            </form>
+                              <Dialog open={activeReviewSubmissionId === submission.id} onOpenChange={(open) => setActiveReviewSubmissionId(open ? submission.id : null)}>
+                                <DialogTrigger asChild>
+                                  <button type="button" className="mt-3 inline-flex min-h-11 items-center gap-2 rounded-xl border border-border px-4 py-2.5 text-sm font-display font-bold text-foreground transition-colors hover:bg-white/[0.06]">
+                                    <FileText className="w-4 h-4" /> Review submission
+                                  </button>
+                                </DialogTrigger>
+                                <DialogContent className="max-h-[calc(100vh-2rem)] overflow-y-auto sm:max-w-xl">
+                                  <DialogHeader>
+                                    <DialogTitle>Review submission</DialogTitle>
+                                    <DialogDescription>{submission.original_name} · attempt {submission.attempt_number}</DialogDescription>
+                                  </DialogHeader>
+                                  <form onSubmit={(event) => { event.preventDefault(); void submitReview(submission); }} className="space-y-4">
+                                    <button type="button" onClick={() => void openSubmittedPdf(submission)} disabled={openingSubmissionId === submission.id} className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-border px-4 py-2.5 text-sm font-display font-bold text-foreground transition-colors hover:bg-muted disabled:cursor-wait disabled:opacity-50">
+                                      {openingSubmissionId === submission.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileText className="w-4 h-4" />}
+                                      Open submitted PDF
+                                    </button>
+                                    <div className="grid gap-3 sm:grid-cols-2">
+                                      <label className="block"><span className="mb-1.5 block text-xs text-muted-foreground">Decision</span><select value={draft.status} onChange={(event) => setReviewDrafts((current) => ({ ...current, [submission.id]: { ...draft, status: event.target.value as ReviewStatus } }))} className={inputClass}><option value="graded">Grade and share</option><option value="returned">Return for revision</option></select></label>
+                                      <label className="block"><span className="mb-1.5 block text-xs text-muted-foreground">Grade (0–100)</span><input type="number" min="0" max="100" step="0.01" value={draft.grade} disabled={draft.status !== "graded"} onChange={(event) => setReviewDrafts((current) => ({ ...current, [submission.id]: { ...draft, grade: event.target.value } }))} className={inputClass} /></label>
+                                    </div>
+                                    <label className="block"><span className="mb-1.5 block text-xs text-muted-foreground">Feedback</span><textarea value={draft.feedback} maxLength={4000} rows={4} onChange={(event) => setReviewDrafts((current) => ({ ...current, [submission.id]: { ...draft, feedback: event.target.value } }))} placeholder="Feedback for the student" className={inputClass} /></label>
+                                    <DialogFooter>
+                                      <button type="submit" disabled={isReviewing} className="min-h-11 rounded-xl bg-gradient-red px-4 py-2.5 text-sm font-display font-bold text-white disabled:opacity-50">
+                                        {isReviewing ? <Loader2 className="w-4 h-4 animate-spin" /> : draft.status === "graded" ? "Save grade" : "Return submission"}
+                                      </button>
+                                    </DialogFooter>
+                                  </form>
+                                </DialogContent>
+                              </Dialog>
+                            </article>
                           );
                         })}
                       </div>
@@ -807,19 +789,21 @@ export default function DoctorWorkspace() {
 
             <label className="block">
               <span className="sr-only">Course</span>
-              <select
+              <Select
                 value={materialCourseId}
-                onChange={(event) => setMaterialCourseId(event.target.value)}
-                required
-                className={inputClass}
+                onValueChange={setMaterialCourseId}
               >
-                <option value="">Select a course…</option>
-                {courses.map((course) => (
-                  <option key={course.id} value={course.id}>
-                    {course.code ? `${course.code} · ` : ""}{courseTitle(course)} ({course.semester})
-                  </option>
-                ))}
-              </select>
+                <SelectTrigger className="h-12 w-full rounded-xl border-border bg-input px-4 text-foreground" aria-label="Course">
+                  <SelectValue placeholder="Select a course…" />
+                </SelectTrigger>
+                <SelectContent>
+                  {courses.map((course) => (
+                    <SelectItem key={course.id} value={course.id}>
+                      {course.code ? `${course.code} · ` : ""}{courseTitle(course)} ({course.semester})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </label>
 
             <label className="block">
@@ -895,14 +879,23 @@ export default function DoctorWorkspace() {
                     {material.published_at === null ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
 
-                  <button
-                    type="button"
-                    onClick={() => void removeMaterial(material)}
-                    className="p-2 rounded-lg hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors"
-                    aria-label="Delete material"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <button type="button" className="p-2 rounded-lg hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors" aria-label="Delete material">
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Delete this material?</AlertDialogTitle>
+                        <AlertDialogDescription>Students will lose access to “{material.title}” immediately. This cannot be undone.</AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction variant="destructive" onClick={() => void removeMaterial(material)}>Delete material</AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
                 </div>
               ))
             )}
@@ -941,25 +934,26 @@ export default function DoctorWorkspace() {
             <form onSubmit={submitExam} className="grid lg:grid-cols-2 gap-4 mt-6">
               <label className="block">
                 <span className="sr-only">{isFr ? "Cours" : "Course"}</span>
-                <select
+                <Select
                   value={examCourseId}
-                  onChange={(event) => {
-                    const nextCourseId = event.target.value;
+                  onValueChange={(nextCourseId) => {
                     setExamCourseId(nextCourseId);
                     const matched = taughtCourses.find((course) => course.id === nextCourseId);
                     if (matched) setExamTrack(matched.track);
                   }}
-                  required
-                  className={inputClass}
                 >
-                  <option value="">{isFr ? "Sélectionner un cours…" : "Select a course…"}</option>
-                  {taughtCourses.map((course) => (
-                    <option key={course.id} value={course.id}>
+                  <SelectTrigger className="h-12 w-full rounded-xl border-border bg-input px-4 text-foreground" aria-label={isFr ? "Cours" : "Course"}>
+                    <SelectValue placeholder={isFr ? "Sélectionner un cours…" : "Select a course…"} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {taughtCourses.map((course) => (
+                    <SelectItem key={course.id} value={course.id}>
                       {course.code ? `${course.code} · ` : ""}
                       {courseTitle(course)} ({course.semester})
-                    </option>
-                  ))}
-                </select>
+                    </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </label>
 
               <label className="block">

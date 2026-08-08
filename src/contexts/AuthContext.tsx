@@ -127,7 +127,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         // call site — this is the only place the session is authoritative.
         setSentryUser({
           id: sess.user.id,
-          email: sess.user.email,
           role: ownerFlag ? "owner" : adminFlag ? "admin" : prof?.role ?? "student",
         });
         setTelemetryUser(sess.user.id);

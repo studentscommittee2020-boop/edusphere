@@ -8,8 +8,8 @@ import { isSupabaseConfigured } from "./lib/supabase.ts";
 import { initSentry } from "./lib/sentry.ts";
 import { initTelemetry } from "./lib/telemetry.ts";
 
-// Both run before render so the earliest errors and the first page view are
-// captured. Each is inert when its configuration is absent.
+// Diagnostics starts before render. Product analytics stays inert until the
+// visitor opts in through the in-app consent prompt.
 initSentry();
 initTelemetry();
 

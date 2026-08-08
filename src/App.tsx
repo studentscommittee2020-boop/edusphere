@@ -5,6 +5,7 @@ import Layout from "./components/Layout";
 import { useAuth } from "./contexts/AuthContext";
 import { trackPageView } from "./lib/telemetry";
 import { useAppStore } from "./store/appStore";
+import AnalyticsConsent from "./components/AnalyticsConsent";
 
 // ── Page imports (lazy for code splitting) ────────────────────────────────────
 const Index     = lazy(() => import("./pages/Index"));
@@ -75,12 +76,16 @@ function OwnerRoute({ children }: { children: React.ReactNode }) {
 /** A signed-in account must complete its authenticator-app challenge before
     any authenticated portal screen is rendered. Public pages remain public. */
 function MfaGate({ children }: { children: React.ReactNode }) {
-  const { isAuthenticated, isLoading, isMfaVerified, profile } = useAuth();
+  const { isAuthenticated, isLoading, isMfaVerified, profile, isAdmin, isOwner, isDoctor, isCommitteeAdmin } = useAuth();
   const location = useLocation();
   if (isLoading) return <PageLoader />;
-  // A phone number is a required testing contact detail. Keep this gate beside
-  // MFA so a signed-in session cannot bypass the profile-completion screen.
-  if (isAuthenticated && (!profile?.phone || !isMfaVerified)) {
+  // Development-only staff/dean bypass: the phone input remains visible in
+  // Profile, but local test accounts can reach their workspaces faster. This
+  // branch is removed from production builds, where every role requires a
+  // phone number alongside MFA.
+  const isStaffAccount = isAdmin || isOwner || isDoctor || isCommitteeAdmin;
+  const phoneIsRequired = !import.meta.env.DEV || !isStaffAccount;
+  if (isAuthenticated && (!isMfaVerified || (phoneIsRequired && !profile?.phone))) {
     return <Navigate to="/auth" replace state={{ next: location.pathname }} />;
   }
   return <>{children}</>;
@@ -109,6 +114,7 @@ export default function App() {
   return (
     <BrowserRouter>
       <RouteTelemetry />
+      <AnalyticsConsent />
       <Toaster
         position="bottom-right"
         toastOptions={{

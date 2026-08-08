@@ -35,6 +35,16 @@ import {
 } from "@/services/owner";
 import type { AuditLog, Profile } from "@/types/database";
 import { cn } from "@/lib/utils";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 type Tab = "overview" | "accounts" | "tables" | "audit";
 
@@ -70,6 +80,7 @@ export default function OwnerConsole() {
   const [tablePage, setTablePage] = useState(0);
   const [tableRows, setTableRows] = useState<Record<string, unknown>[]>([]);
   const [tableTotal, setTableTotal] = useState(0);
+  const [pendingDeletion, setPendingDeletion] = useState<Record<string, unknown> | null>(null);
 
   // ── Loaders ────────────────────────────────────────────────────────────────
 
@@ -128,19 +139,12 @@ export default function OwnerConsole() {
     track("owner_account_inspected");
   }
 
-  async function handleDeleteRow(row: Record<string, unknown>) {
+  async function confirmDeleteRow(row: Record<string, unknown>) {
     const id = typeof row.id === "string" ? row.id : null;
     if (!id) {
       toast.error(isFr ? "Cette ligne n'a pas d'identifiant." : "That row has no id column.");
       return;
     }
-
-    const confirmed = window.confirm(
-      isFr
-        ? `Supprimer définitivement cette ligne de ${activeTable} ? Action enregistrée dans l'audit.`
-        : `Permanently delete this row from ${activeTable}? This is written to the audit trail.`,
-    );
-    if (!confirmed) return;
 
     const { error } = await deleteRow(activeTable, id);
     if (error) {
@@ -149,6 +153,7 @@ export default function OwnerConsole() {
     }
     toast.success(isFr ? "Ligne supprimée." : "Row deleted.");
     track("owner_row_deleted", { table: activeTable });
+    setPendingDeletion(null);
     void loadTable();
   }
 
@@ -420,7 +425,7 @@ export default function OwnerConsole() {
                       <td className="px-4 py-2.5 text-right">
                         <button
                           type="button"
-                          onClick={() => void handleDeleteRow(row)}
+                          onClick={() => setPendingDeletion(row)}
                           className="p-1.5 rounded-lg hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors"
                           aria-label={isFr ? "Supprimer" : "Delete"}
                         >
@@ -554,6 +559,22 @@ export default function OwnerConsole() {
           onClose={() => setActAsTarget(null)}
         />
       )}
+      <AlertDialog open={pendingDeletion !== null} onOpenChange={(open) => !open && setPendingDeletion(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{isFr ? "Supprimer cette ligne ?" : "Delete this row?"}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {isFr ? `Cette ligne sera supprimée définitivement de ${activeTable}. L'action sera enregistrée dans le journal d'audit.` : `This row will be permanently removed from ${activeTable}. The action will be written to the audit trail.`}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{isFr ? "Annuler" : "Cancel"}</AlertDialogCancel>
+            <AlertDialogAction variant="destructive" onClick={() => { if (pendingDeletion) void confirmDeleteRow(pendingDeletion); }}>
+              {isFr ? "Supprimer définitivement" : "Delete permanently"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
