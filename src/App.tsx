@@ -4,6 +4,7 @@ import { Toaster } from "sonner";
 import Layout from "./components/Layout";
 import { useAuth } from "./contexts/AuthContext";
 import { trackPageView } from "./lib/telemetry";
+import { canBypassReviewPhone } from "./lib/reviewAccess";
 import { useAppStore } from "./store/appStore";
 
 // ── Page imports (lazy for code splitting) ────────────────────────────────────
@@ -78,17 +79,11 @@ function MfaGate({ children }: { children: React.ReactNode }) {
   const { user, isAuthenticated, isLoading, isMfaVerified, profile, isAdmin, isOwner, isDoctor, isCommitteeAdmin } = useAuth();
   const location = useLocation();
   if (isLoading) return <PageLoader />;
-  // Prepared staff review accounts can omit the phone only in local dev or a
-  // deliberately configured review build. Production remains mandatory.
+  // The four prepared staff accounts have an explicitly authorized temporary
+  // review exception. Role verification prevents this email allow-list from
+  // applying to a non-staff account.
   const isStaffAccount = isAdmin || isOwner || isDoctor || isCommitteeAdmin;
-  const reviewPhoneBypass = import.meta.env.DEV || import.meta.env.VITE_REVIEW_PHONE_BYPASS === "true";
-  const isPreparedReviewAccount = [
-    "review-owner@edusphere.local",
-    "review-admin@edusphere.local",
-    "review-committee@edusphere.local",
-    "review-doctor@edusphere.local",
-  ].includes(user?.email?.toLowerCase() ?? "");
-  const phoneIsRequired = !(reviewPhoneBypass && isStaffAccount && isPreparedReviewAccount);
+  const phoneIsRequired = !(isStaffAccount && canBypassReviewPhone(user?.email));
   if (isAuthenticated && (!isMfaVerified || (phoneIsRequired && !profile?.phone))) {
     return <Navigate to="/auth" replace state={{ next: location.pathname }} />;
   }

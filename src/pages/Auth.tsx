@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/lib/supabase";
+import { canBypassReviewPhone } from "@/lib/reviewAccess";
 import {
   requestStudentOtp,
   verifyStudentOtp,
@@ -42,7 +43,6 @@ type ReviewAccount = {
 // account still signs in through Supabase with its password and receives its
 // normal server-enforced permissions. Remove after the dean review.
 const mockReviewEnabled = true;
-const reviewPhoneBypass = import.meta.env.DEV || import.meta.env.VITE_REVIEW_PHONE_BYPASS === "true";
 
 const reviewAccounts: ReviewAccount[] = [
   { label: "Mock owner", email: "review-owner@edusphere.local", description: "Full owner console and audit access" },
@@ -50,10 +50,6 @@ const reviewAccounts: ReviewAccount[] = [
   { label: "Student council", email: "review-committee@edusphere.local", description: "Council book upload and replacement review" },
   { label: "Dr. Review", email: "review-doctor@edusphere.local", description: "Assigned course-book confirmation or replacement" },
 ];
-
-function isPreparedReviewEmail(email: string | null | undefined): boolean {
-  return reviewAccounts.some((account) => account.email === email?.trim().toLowerCase());
-}
 
 const inputClass =
   "w-full pl-11 pr-4 py-3.5 bg-input border border-border rounded-2xl text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:ring-2 focus:ring-red-500/40 focus:border-red-500/60 transition-all";
@@ -171,13 +167,38 @@ export default function Auth() {
   const [isLoading, setIsLoading] = useState(false);
 
   const nextPath = (location.state as { next?: string } | null)?.next || "/";
+  const preparedReviewSelected = canBypassReviewPhone(email);
 
-  /** Local-only shortcut for prepared dean/staff review accounts. Production
-      always collects the required profile phone before the MFA challenge. */
+  const authBackLabel = (() => {
+    if (mode === "staff" && preparedReviewSelected) return "Review accounts";
+    if (mode === "forgot" || mode === "staffOtp") return "Staff sign in";
+    if (mode === "staff" || mode === "review") return "Student access";
+    return "Back to portal";
+  })();
+
+  function handleAuthBack() {
+    setShowPassword(false);
+    if (mode === "staff" && preparedReviewSelected) {
+      setPassword("");
+      setMode("review");
+      return;
+    }
+    if (mode === "forgot" || mode === "staffOtp") {
+      setMode("staff");
+      return;
+    }
+    if (mode === "staff" || mode === "review") {
+      setMode("student");
+      return;
+    }
+    navigate("/");
+  }
+
+  /** Temporary shortcut for the four prepared dean/staff review accounts.
+      The authenticated database role is still checked before it is applied. */
   async function isPreparedReviewAccount(): Promise<boolean> {
-    if (!reviewPhoneBypass) return false;
     const { data: { user: activeUser } } = await supabase.auth.getUser();
-    if (!activeUser || !isPreparedReviewEmail(activeUser.email)) return false;
+    if (!activeUser || !canBypassReviewPhone(activeUser.email)) return false;
     const [profileResult, adminResult, ownerResult] = await Promise.all([
       supabase.from("profiles").select("role").eq("id", activeUser.id).single(),
       supabase.rpc("is_admin"),
@@ -480,6 +501,19 @@ export default function Auth() {
               exit={{ opacity: 0, x: -14 }}
               transition={{ duration: 0.18 }}
             >
+              {(mode === "student" || mode === "staff" || mode === "review" || mode === "forgot" || mode === "staffOtp") && (
+                <button
+                  type="button"
+                  onClick={handleAuthBack}
+                  className="group mb-7 inline-flex min-h-11 items-center gap-2.5 rounded-2xl border border-border bg-muted/35 py-1.5 pl-1.5 pr-4 text-sm font-medium text-muted-foreground shadow-sm transition hover:border-red-400/40 hover:bg-red-500/[0.07] hover:text-foreground focus:outline-none focus:ring-2 focus:ring-red-500/40"
+                >
+                  <span className="flex size-8 items-center justify-center rounded-xl border border-border bg-background/80 text-foreground transition-transform group-hover:-translate-x-0.5">
+                    <ArrowLeft className="size-4" />
+                  </span>
+                  {authBackLabel}
+                </button>
+              )}
+
               {mode === "verify" && (
                 <button
                   type="button"
@@ -577,8 +611,8 @@ export default function Auth() {
                   </label>
                   <label className="block">
                     <span className="text-xs font-display font-bold uppercase tracking-[0.14em] text-muted-foreground mb-2 block">Mobile number</span>
-                    <div className="relative"><Smartphone className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" /><input name="phone" data-sensitive="true" type="tel" inputMode="tel" autoComplete="tel" value={phone} onChange={(event) => setPhone(event.target.value)} placeholder="+961 70 123 456" required={!(reviewPhoneBypass && isPreparedReviewEmail(email))} className={inputClass} /></div>
-                    {reviewPhoneBypass && isPreparedReviewEmail(email) && <p className="mt-2 text-xs text-muted-foreground">Optional for this prepared review account only.</p>}
+                    <div className="relative"><Smartphone className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" /><input name="phone" data-sensitive="true" type="tel" inputMode="tel" autoComplete="tel" value={phone} onChange={(event) => setPhone(event.target.value)} placeholder="+961 70 123 456" required={!preparedReviewSelected} className={inputClass} /></div>
+                    {preparedReviewSelected && <p className="mt-2 text-xs text-muted-foreground">Optional for this prepared review account only.</p>}
                   </label>
                   <label className="block">
                     <span className="text-xs font-display font-bold uppercase tracking-[0.14em] text-muted-foreground mb-2 block">Password</span>
@@ -616,8 +650,8 @@ export default function Auth() {
                   </label>
                   <label className="block">
                     <span className="text-xs font-display font-bold uppercase tracking-[0.14em] text-muted-foreground mb-2 block">Mobile number</span>
-                    <div className="relative"><Smartphone className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" /><input name="phone" data-sensitive="true" type="tel" inputMode="tel" autoComplete="tel" value={phone} onChange={(event) => setPhone(event.target.value)} placeholder="+961 70 123 456" required={!(reviewPhoneBypass && isPreparedReviewEmail(email))} className={inputClass} /></div>
-                    {reviewPhoneBypass && isPreparedReviewEmail(email) && <p className="mt-2 text-xs text-muted-foreground">Optional for this prepared review account only.</p>}
+                    <div className="relative"><Smartphone className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" /><input name="phone" data-sensitive="true" type="tel" inputMode="tel" autoComplete="tel" value={phone} onChange={(event) => setPhone(event.target.value)} placeholder="+961 70 123 456" required={!preparedReviewSelected} className={inputClass} /></div>
+                    {preparedReviewSelected && <p className="mt-2 text-xs text-muted-foreground">Optional for this prepared review account only.</p>}
                   </label>
                   <p className="text-xs leading-5 text-muted-foreground">
                     {t(
