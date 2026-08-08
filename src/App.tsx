@@ -4,7 +4,7 @@ import { Toaster } from "sonner";
 import Layout from "./components/Layout";
 import { useAuth } from "./contexts/AuthContext";
 import { trackPageView } from "./lib/telemetry";
-import { canBypassReviewPhone } from "./lib/reviewAccess";
+import { canBypassReviewMfa, canBypassReviewPhone } from "./lib/reviewAccess";
 import { useAppStore } from "./store/appStore";
 
 // ── Page imports (lazy for code splitting) ────────────────────────────────────
@@ -83,8 +83,9 @@ function MfaGate({ children }: { children: React.ReactNode }) {
   // review exception. Role verification prevents this email allow-list from
   // applying to a non-staff account.
   const isStaffAccount = isAdmin || isOwner || isDoctor || isCommitteeAdmin;
+  const reviewMfaBypass = isStaffAccount && canBypassReviewMfa(user?.email);
   const phoneIsRequired = !(isStaffAccount && canBypassReviewPhone(user?.email));
-  if (isAuthenticated && (!isMfaVerified || (phoneIsRequired && !profile?.phone))) {
+  if (isAuthenticated && ((!reviewMfaBypass && !isMfaVerified) || (phoneIsRequired && !profile?.phone))) {
     return <Navigate to="/auth" replace state={{ next: location.pathname }} />;
   }
   return <>{children}</>;

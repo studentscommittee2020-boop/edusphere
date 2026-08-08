@@ -1,15 +1,17 @@
 import { describe, expect, it } from "vitest";
 import {
   PREPARED_REVIEW_EMAILS,
+  canBypassReviewMfa,
   canBypassReviewPhone,
   isPreparedReviewEmail,
 } from "@/lib/reviewAccess";
 
-describe("temporary prepared-review phone policy", () => {
+describe("temporary prepared-review security policy", () => {
   it("allows exactly the four prepared review emails", () => {
     expect(PREPARED_REVIEW_EMAILS).toHaveLength(4);
     for (const email of PREPARED_REVIEW_EMAILS) {
       expect(canBypassReviewPhone(email)).toBe(true);
+      expect(canBypassReviewMfa(email)).toBe(true);
     }
   });
 
@@ -24,7 +26,8 @@ describe("temporary prepared-review phone policy", () => {
     "doctor@edusphere.local",
     "review-doctor@edusphere.local.attacker.example",
     "review-student@edusphere.local",
-  ])("keeps phone mandatory for %s", (email) => {
+  ])("keeps phone and MFA mandatory for %s", (email) => {
     expect(canBypassReviewPhone(email)).toBe(false);
+    expect(canBypassReviewMfa(email)).toBe(false);
   });
 });

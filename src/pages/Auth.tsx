@@ -21,7 +21,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/lib/supabase";
-import { canBypassReviewPhone } from "@/lib/reviewAccess";
+import { canBypassReviewMfa, canBypassReviewPhone } from "@/lib/reviewAccess";
 import {
   requestStudentOtp,
   verifyStudentOtp,
@@ -198,7 +198,7 @@ export default function Auth() {
       The authenticated database role is still checked before it is applied. */
   async function isPreparedReviewAccount(): Promise<boolean> {
     const { data: { user: activeUser } } = await supabase.auth.getUser();
-    if (!activeUser || !canBypassReviewPhone(activeUser.email)) return false;
+    if (!activeUser || !canBypassReviewMfa(activeUser.email)) return false;
     const [profileResult, adminResult, ownerResult] = await Promise.all([
       supabase.from("profiles").select("role").eq("id", activeUser.id).single(),
       supabase.rpc("is_admin"),
@@ -247,25 +247,31 @@ export default function Auth() {
     return true;
   }
 
-  async function continueStaffAuthentication(): Promise<boolean> {
+  async function continueStaffAuthentication(): Promise<"portal" | "mfa" | null> {
     if (await isPreparedReviewAccount()) {
       await refreshProfile();
-      await beginMfaFlow();
-      return true;
+      navigate(nextPath, { replace: true });
+      return "portal";
     }
-    return savePhoneAndBeginMfa();
+    return (await savePhoneAndBeginMfa()) ? "mfa" : null;
   }
 
   useEffect(() => {
     if (!user) return;
-    supabase.from("profiles").select("phone").eq("id", user.id).single().then(async ({ data }) => {
-      if (!data?.phone && !(await isPreparedReviewAccount())) {
+    void (async () => {
+      if (await isPreparedReviewAccount()) {
+        await refreshProfile();
+        navigate(nextPath, { replace: true });
+        return;
+      }
+      const { data } = await supabase.from("profiles").select("phone").eq("id", user.id).single();
+      if (!data?.phone) {
         setMode("contact");
         return;
       }
       setPhone(data?.phone ?? "");
-      void beginMfaFlow();
-    });
+      await beginMfaFlow();
+    })();
   }, [user?.id]);
 
   async function handleStudentRequest(event: React.FormEvent) {
@@ -315,7 +321,9 @@ export default function Auth() {
       return;
     }
 
-    if (await continueStaffAuthentication()) toast.success("Welcome back. Complete secure access below.");
+    const destination = await continueStaffAuthentication();
+    if (destination === "portal") toast.success("Prepared review access confirmed.");
+    if (destination === "mfa") toast.success("Welcome back. Complete secure access below.");
   }
 
   async function handlePasswordReset(event: React.FormEvent) {
@@ -365,7 +373,9 @@ export default function Auth() {
       return;
     }
 
-    if (await continueStaffAuthentication()) toast.success(t(language, "Bon retour. Finalisez l'accès sécurisé.", "Welcome back. Complete secure access below."));
+    const destination = await continueStaffAuthentication();
+    if (destination === "portal") toast.success(t(language, "Accès de révision confirmé.", "Prepared review access confirmed."));
+    if (destination === "mfa") toast.success(t(language, "Bon retour. Finalisez l'accès sécurisé.", "Welcome back. Complete secure access below."));
   }
 
   async function handlePhoneSetup(event: React.FormEvent) {
