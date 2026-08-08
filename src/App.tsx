@@ -5,7 +5,6 @@ import Layout from "./components/Layout";
 import { useAuth } from "./contexts/AuthContext";
 import { trackPageView } from "./lib/telemetry";
 import { useAppStore } from "./store/appStore";
-import AnalyticsConsent from "./components/AnalyticsConsent";
 
 // ── Page imports (lazy for code splitting) ────────────────────────────────────
 const Index     = lazy(() => import("./pages/Index"));
@@ -114,7 +113,6 @@ export default function App() {
   return (
     <BrowserRouter>
       <RouteTelemetry />
-      <AnalyticsConsent />
       <Toaster
         position="bottom-right"
         toastOptions={{

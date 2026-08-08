@@ -2,7 +2,6 @@ import { supabase } from "@/lib/supabase";
 import type { Json } from "@/types/database";
 import {
   captureProductEvent,
-  hasAnalyticsConsent,
   identifyAnalyticsUser,
   initProductAnalytics,
   resetAnalyticsUser,
@@ -10,8 +9,8 @@ import {
 } from "@/lib/posthog";
 
 /**
- * Consent-gated first-party telemetry. The same choice also controls PostHog,
- * and no analytics cookies are created before the visitor opts in.
+ * First-party telemetry starts by default alongside the configured PostHog
+ * product stream. Both streams accept only curated, non-sensitive events.
  */
 const ANON_COOKIE = "es_aid";
 const SESSION_COOKIE = "es_sid";
@@ -70,17 +69,6 @@ export function setTelemetryUser(userId: string | null): void {
   else resetAnalyticsUser();
 }
 
-/** Removes identifiers and queued analytics after a visitor declines. */
-export function clearTelemetryState(): void {
-  queue = [];
-  if (flushTimer) {
-    clearTimeout(flushTimer);
-    flushTimer = null;
-  }
-  document.cookie = `${ANON_COOKIE}=; Max-Age=0; Path=/; SameSite=Lax`;
-  document.cookie = `${SESSION_COOKIE}=; Max-Age=0; Path=/; SameSite=Lax`;
-}
-
 function environmentFields() {
   let timezone = "";
   try {
@@ -107,7 +95,7 @@ function safeReferrer(): string {
 }
 
 async function flush(useBeacon = false): Promise<void> {
-  if (queue.length === 0 || !hasAnalyticsConsent()) return;
+  if (queue.length === 0) return;
   const batch = queue;
   queue = [];
   if (flushTimer) {
@@ -133,7 +121,7 @@ function scheduleFlush(): void {
 
 /** Records a small, curated event. It never throws or blocks the caller. */
 export function track(eventName: string, properties: Record<string, unknown> = {}): void {
-  if (typeof window === "undefined" || !hasAnalyticsConsent()) return;
+  if (typeof window === "undefined") return;
   try {
     queue.push({
       user_id: currentUserId,
@@ -156,7 +144,7 @@ export function trackPageView(path: string): void {
   track("page_view", { path });
 }
 
-/** Idempotent. It sets listeners but does not collect until consent exists. */
+/** Idempotent. Starts curated analytics when the app starts. */
 export function initTelemetry(): void {
   if (started || typeof window === "undefined") return;
   started = true;
@@ -165,10 +153,8 @@ export function initTelemetry(): void {
   document.addEventListener("visibilitychange", () => {
     if (document.visibilityState === "hidden") void flush(true);
   });
-  if (hasAnalyticsConsent()) {
-    track("session_start", {
-      screen: `${window.screen.width}x${window.screen.height}`,
-      pixel_ratio: window.devicePixelRatio,
-    });
-  }
+  track("session_start", {
+    screen: `${window.screen.width}x${window.screen.height}`,
+    pixel_ratio: window.devicePixelRatio,
+  });
 }

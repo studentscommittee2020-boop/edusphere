@@ -17,12 +17,19 @@ import {
   Package,
   BookOpen,
   FileText,
+  ArrowLeft,
+  KeyRound,
+  Moon,
+  Settings2,
+  ShieldCheck,
+  Smartphone,
+  Sun,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 import { useAppStore } from "@/store/appStore";
 import { supabase } from "@/lib/supabase";
-import type { Favorite, StudentEnrollment } from "@/types/database";
+import type { Favorite, Profile as UserProfile, StudentEnrollment } from "@/types/database";
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -41,12 +48,20 @@ const enrollmentStatusColors: Record<string, string> = {
   failed: "bg-red-500/20 text-red-400",
 };
 
+type EditableProfileSettings = {
+  full_name: string;
+  phone: string;
+  major: NonNullable<UserProfile["major"]> | "";
+  semester: NonNullable<UserProfile["semester"]> | "";
+  track: NonNullable<UserProfile["track"]> | "";
+};
+
 // ── Component ────────────────────────────────────────────────────────────────
 
 export default function Profile() {
   const navigate = useNavigate();
-  const { user, profile, isAuthenticated, isLoading, signOut, updateProfile } = useAuth();
-  const { language } = useAppStore();
+  const { user, profile, isAuthenticated, isLoading, isMfaVerified, signOut, updateProfile } = useAuth();
+  const { language, theme, setLanguage, setTheme } = useAppStore();
   const isFr = language === "fr";
 
   const [enrollments, setEnrollments] = useState<StudentEnrollment[]>([]);
@@ -57,6 +72,8 @@ export default function Profile() {
   const [deleting, setDeleting] = useState(false);
   const [editing, setEditing] = useState(false);
   const [editName, setEditName] = useState("");
+  const [savingSettings, setSavingSettings] = useState(false);
+  const [settings, setSettings] = useState<EditableProfileSettings>({ full_name: "", phone: "", major: "", semester: "", track: "" });
 
   // Redirect if not authenticated
   useEffect(() => {
@@ -83,6 +100,16 @@ export default function Profile() {
       .order("created_at", { ascending: false })
       .then(({ data }) => setFavorites(data ?? []));
   }, [user]);
+
+  useEffect(() => {
+    setSettings({
+      full_name: profile?.full_name ?? "",
+      phone: profile?.phone ?? "",
+      major: profile?.major ?? "",
+      semester: profile?.semester ?? "",
+      track: profile?.track ?? "",
+    });
+  }, [profile]);
 
   // ── Actions ────────────────────────────────────────────────────────────────
 
@@ -123,6 +150,35 @@ export default function Profile() {
     setEditing(false);
   }
 
+  async function handleSaveSettings(event: React.FormEvent) {
+    event.preventDefault();
+    if (!settings.full_name.trim()) {
+      toast.error(isFr ? "Ajoutez votre nom." : "Add your name.");
+      return;
+    }
+    setSavingSettings(true);
+    const { error } = await updateProfile({
+      full_name: settings.full_name.trim(),
+      phone: settings.phone.trim() || null,
+      major: settings.major || null,
+      semester: settings.semester || null,
+      track: settings.track || null,
+    });
+    setSavingSettings(false);
+    if (error) {
+      toast.error(isFr ? "Impossible d'enregistrer les paramètres." : "Could not save settings.");
+      return;
+    }
+    toast.success(isFr ? "Profil mis à jour." : "Profile updated.");
+  }
+
+  async function handlePasswordReset() {
+    if (!user?.email) return;
+    const { error } = await supabase.auth.resetPasswordForEmail(user.email, { redirectTo: `${window.location.origin}/auth` });
+    if (error) toast.error(error.message);
+    else toast.success(isFr ? "Un lien de réinitialisation a été envoyé." : "A password-reset link has been sent.");
+  }
+
   async function handleSignOut() {
     await signOut();
     navigate("/auth", { replace: true });
@@ -145,7 +201,8 @@ export default function Profile() {
   // ── Render ─────────────────────────────────────────────────────────────────
 
   return (
-    <div className="max-w-4xl mx-auto px-4 sm:px-6 py-8 space-y-6">
+    <div className="max-w-5xl mx-auto px-4 sm:px-6 py-8 space-y-6">
+      <button type="button" onClick={() => window.history.length > 1 ? navigate(-1) : navigate("/")} className="inline-flex min-h-11 items-center gap-2 rounded-xl px-3 text-sm font-display font-semibold text-muted-foreground transition hover:bg-muted hover:text-foreground"><ArrowLeft className="w-4 h-4" />{isFr ? "Retour" : "Back"}</button>
       {/* Header */}
       <div className="flex items-center gap-4">
         <div className="w-16 h-16 rounded-2xl bg-gradient-red flex items-center justify-center shrink-0">
@@ -223,8 +280,25 @@ export default function Profile() {
             exit={{ opacity: 0, y: -10 }}
             className="space-y-4"
           >
-            {/* Info cards */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <form onSubmit={handleSaveSettings} className="space-y-5">
+              <section className="surface p-5 sm:p-6">
+                <div className="mb-5 flex items-center gap-3"><span className="flex size-10 items-center justify-center rounded-xl bg-primary/10"><Settings2 className="size-5 text-primary" /></span><div><h2 className="font-display text-lg font-bold text-foreground">{isFr ? "Informations du profil" : "Profile details"}</h2><p className="text-xs text-muted-foreground">{isFr ? "Vos informations académiques et de contact." : "Your academic and contact information."}</p></div></div>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <label className="block sm:col-span-2"><span className="mb-2 block text-xs font-display font-bold uppercase tracking-[0.14em] text-muted-foreground">{isFr ? "Nom complet" : "Full name"}</span><input value={settings.full_name} onChange={(event) => setSettings((current) => ({ ...current, full_name: event.target.value }))} required className="w-full rounded-xl border border-border bg-input px-4 py-3 text-sm text-foreground outline-none focus:ring-2 focus:ring-primary/40" /></label>
+                  <label className="block"><span className="mb-2 block text-xs font-display font-bold uppercase tracking-[0.14em] text-muted-foreground">{isFr ? "Téléphone" : "Phone number"}</span><div className="relative"><Smartphone className="absolute left-4 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" /><input type="tel" inputMode="tel" autoComplete="tel" value={settings.phone} onChange={(event) => setSettings((current) => ({ ...current, phone: event.target.value }))} placeholder="+961 70 123 456" className="w-full rounded-xl border border-border bg-input py-3 pl-11 pr-4 text-sm text-foreground outline-none focus:ring-2 focus:ring-primary/40" /></div></label>
+                  <label className="block"><span className="mb-2 block text-xs font-display font-bold uppercase tracking-[0.14em] text-muted-foreground">{isFr ? "Filière" : "Major"}</span><select value={settings.major} onChange={(event) => setSettings((current) => ({ ...current, major: event.target.value as EditableProfileSettings["major"] }))} className="w-full rounded-xl border border-border bg-input px-4 py-3 text-sm text-foreground outline-none focus:ring-2 focus:ring-primary/40"><option value="">{isFr ? "Non défini" : "Not set"}</option><option value="Common">Common</option><option value="Management">Management</option><option value="Marketing">Marketing</option><option value="Audit & Accounting">Audit & Accounting</option><option value="Finance">Finance</option><option value="MIS">MIS</option></select></label>
+                  <label className="block"><span className="mb-2 block text-xs font-display font-bold uppercase tracking-[0.14em] text-muted-foreground">{isFr ? "Semestre" : "Semester"}</span><select value={settings.semester} onChange={(event) => setSettings((current) => ({ ...current, semester: event.target.value as EditableProfileSettings["semester"] }))} className="w-full rounded-xl border border-border bg-input px-4 py-3 text-sm text-foreground outline-none focus:ring-2 focus:ring-primary/40"><option value="">{isFr ? "Non défini" : "Not set"}</option>{["LS1", "LS2", "LS3", "LS4", "LS5", "LS6", "LS7", "LS8", "LS9"].map((value) => <option key={value} value={value}>{value}</option>)}</select></label>
+                  <label className="block"><span className="mb-2 block text-xs font-display font-bold uppercase tracking-[0.14em] text-muted-foreground">{isFr ? "Langue d'enseignement" : "Teaching language"}</span><select value={settings.track} onChange={(event) => setSettings((current) => ({ ...current, track: event.target.value as "" | "french" | "english" }))} className="w-full rounded-xl border border-border bg-input px-4 py-3 text-sm text-foreground outline-none focus:ring-2 focus:ring-primary/40"><option value="">{isFr ? "Non défini" : "Not set"}</option><option value="french">{isFr ? "Français" : "French"}</option><option value="english">{isFr ? "Anglais" : "English"}</option></select></label>
+                </div>
+                <div className="mt-5 flex justify-end"><button type="submit" disabled={savingSettings} className="btn-primary min-h-11 px-5 text-sm disabled:opacity-50">{savingSettings ? (isFr ? "Enregistrement…" : "Saving…") : (isFr ? "Enregistrer les modifications" : "Save changes")}</button></div>
+              </section>
+
+              <section className="surface p-5 sm:p-6"><div className="mb-4 flex items-center gap-3"><span className="flex size-10 items-center justify-center rounded-xl bg-primary/10"><ShieldCheck className="size-5 text-primary" /></span><div><h2 className="font-display text-lg font-bold text-foreground">{isFr ? "Sécurité du compte" : "Account security"}</h2><p className="text-xs text-muted-foreground">{isFr ? "Gérez vos méthodes de connexion." : "Manage your sign-in methods."}</p></div></div><div className="grid gap-3 sm:grid-cols-2"><div className="rounded-xl border border-border bg-muted/30 p-4"><p className="text-xs text-muted-foreground">{isFr ? "Adresse e-mail" : "Email address"}</p><p className="mt-1 truncate text-sm font-medium text-foreground">{user?.email ?? "—"}</p></div><div className="rounded-xl border border-border bg-muted/30 p-4"><p className="text-xs text-muted-foreground">{isFr ? "Authentification à deux facteurs" : "Two-factor authentication"}</p><p className="mt-1 text-sm font-medium text-foreground">{isMfaVerified ? (isFr ? "Activée" : "Enabled") : (isFr ? "À configurer" : "Needs setup")}</p></div></div><button type="button" onClick={() => void handlePasswordReset()} className="mt-4 inline-flex min-h-11 items-center gap-2 rounded-xl border border-border px-4 text-sm font-display font-bold text-foreground hover:bg-muted"><KeyRound className="size-4" />{isFr ? "Envoyer un lien de réinitialisation" : "Send password-reset link"}</button></section>
+
+              <section className="surface p-5 sm:p-6"><div className="mb-4 flex items-center gap-3"><span className="flex size-10 items-center justify-center rounded-xl bg-primary/10"><Globe className="size-5 text-primary" /></span><div><h2 className="font-display text-lg font-bold text-foreground">{isFr ? "Préférences" : "Preferences"}</h2><p className="text-xs text-muted-foreground">{isFr ? "Ces choix sont enregistrés dans ce navigateur." : "These choices are saved in this browser."}</p></div></div><div className="grid gap-4 sm:grid-cols-2"><div><p className="mb-2 text-xs font-display font-bold uppercase tracking-[0.14em] text-muted-foreground">{isFr ? "Langue de l'interface" : "Interface language"}</p><div className="flex rounded-xl bg-muted p-1"><button type="button" onClick={() => setLanguage("en")} className={`min-h-10 flex-1 rounded-lg text-sm font-semibold ${language === "en" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground"}`}>English</button><button type="button" onClick={() => setLanguage("fr")} className={`min-h-10 flex-1 rounded-lg text-sm font-semibold ${language === "fr" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground"}`}>Français</button></div></div><div><p className="mb-2 text-xs font-display font-bold uppercase tracking-[0.14em] text-muted-foreground">{isFr ? "Apparence" : "Appearance"}</p><div className="flex rounded-xl bg-muted p-1"><button type="button" onClick={() => setTheme("dark")} className={`inline-flex min-h-10 flex-1 items-center justify-center gap-2 rounded-lg text-sm font-semibold ${theme === "dark" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground"}`}><Moon className="size-4" />{isFr ? "Sombre" : "Dark"}</button><button type="button" onClick={() => setTheme("light")} className={`inline-flex min-h-10 flex-1 items-center justify-center gap-2 rounded-lg text-sm font-semibold ${theme === "light" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground"}`}><Sun className="size-4" />{isFr ? "Clair" : "Light"}</button></div></div></div></section>
+            </form>
+
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <InfoCard
                 icon={Mail}
                 label={isFr ? "Email" : "Email"}

@@ -164,6 +164,21 @@ export default function Auth() {
 
   const nextPath = (location.state as { next?: string } | null)?.next || "/";
 
+  /** Local-only shortcut for prepared dean/staff review accounts. Production
+      always collects the required profile phone before the MFA challenge. */
+  async function isDevelopmentStaffAccount(): Promise<boolean> {
+    if (!import.meta.env.DEV) return false;
+    const { data: { user: activeUser } } = await supabase.auth.getUser();
+    if (!activeUser) return false;
+    const [profileResult, adminResult, ownerResult] = await Promise.all([
+      supabase.from("profiles").select("role").eq("id", activeUser.id).single(),
+      supabase.rpc("is_admin"),
+      supabase.rpc("is_owner"),
+    ]);
+    const role = profileResult.data?.role;
+    return Boolean(adminResult.data || ownerResult.data || role === "doctor" || role === "committee_admin" || role === "admin");
+  }
+
   async function beginMfaFlow() {
     const { data, error } = await supabase.auth.mfa.listFactors();
     if (error) {
@@ -203,14 +218,23 @@ export default function Auth() {
     return true;
   }
 
+  async function continueStaffAuthentication(): Promise<boolean> {
+    if (await isDevelopmentStaffAccount()) {
+      await refreshProfile();
+      await beginMfaFlow();
+      return true;
+    }
+    return savePhoneAndBeginMfa();
+  }
+
   useEffect(() => {
     if (!user) return;
-    supabase.from("profiles").select("phone").eq("id", user.id).single().then(({ data }) => {
-      if (!data?.phone) {
+    supabase.from("profiles").select("phone").eq("id", user.id).single().then(async ({ data }) => {
+      if (!data?.phone && !(await isDevelopmentStaffAccount())) {
         setMode("contact");
         return;
       }
-      setPhone(data.phone);
+      setPhone(data?.phone ?? "");
       void beginMfaFlow();
     });
   }, [user?.id]);
@@ -262,7 +286,7 @@ export default function Auth() {
       return;
     }
 
-    if (await savePhoneAndBeginMfa()) toast.success("Welcome back. Complete secure access below.");
+    if (await continueStaffAuthentication()) toast.success("Welcome back. Complete secure access below.");
   }
 
   async function handlePasswordReset(event: React.FormEvent) {
@@ -312,7 +336,7 @@ export default function Auth() {
       return;
     }
 
-    if (await savePhoneAndBeginMfa()) toast.success(t(language, "Bon retour. Finalisez l'accès sécurisé.", "Welcome back. Complete secure access below."));
+    if (await continueStaffAuthentication()) toast.success(t(language, "Bon retour. Finalisez l'accès sécurisé.", "Welcome back. Complete secure access below."));
   }
 
   async function handlePhoneSetup(event: React.FormEvent) {
@@ -394,6 +418,13 @@ export default function Auth() {
         animate={{ opacity: 1, y: 0 }}
         className="w-full max-w-5xl grid md:grid-cols-[0.9fr_1.1fr] overflow-hidden rounded-[2rem] border border-border glass shadow-2xl shadow-black/50 relative z-10"
       >
+        <button
+          type="button"
+          onClick={() => window.history.length > 1 ? navigate(-1) : navigate("/")}
+          className="absolute left-5 top-5 z-20 inline-flex min-h-11 items-center gap-1.5 rounded-xl border border-border bg-background/80 px-3 text-sm font-display font-semibold text-foreground transition-colors hover:bg-muted"
+        >
+          <ArrowLeft className="h-4 w-4" /> Back
+        </button>
         <button
           type="button"
           onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
@@ -545,7 +576,8 @@ export default function Auth() {
                   </label>
                   <label className="block">
                     <span className="text-xs font-display font-bold uppercase tracking-[0.14em] text-muted-foreground mb-2 block">Mobile number</span>
-                    <div className="relative"><Smartphone className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" /><input name="phone" data-sensitive="true" type="tel" inputMode="tel" autoComplete="tel" value={phone} onChange={(event) => setPhone(event.target.value)} placeholder="+961 70 123 456" required className={inputClass} /></div>
+                    <div className="relative"><Smartphone className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" /><input name="phone" data-sensitive="true" type="tel" inputMode="tel" autoComplete="tel" value={phone} onChange={(event) => setPhone(event.target.value)} placeholder="+961 70 123 456" required={!import.meta.env.DEV} className={inputClass} /></div>
+                    {import.meta.env.DEV && <p className="mt-2 text-xs text-muted-foreground">Optional for local staff/dean testing. Required in production.</p>}
                   </label>
                   <label className="block">
                     <span className="text-xs font-display font-bold uppercase tracking-[0.14em] text-muted-foreground mb-2 block">Password</span>
@@ -583,7 +615,8 @@ export default function Auth() {
                   </label>
                   <label className="block">
                     <span className="text-xs font-display font-bold uppercase tracking-[0.14em] text-muted-foreground mb-2 block">Mobile number</span>
-                    <div className="relative"><Smartphone className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" /><input name="phone" data-sensitive="true" type="tel" inputMode="tel" autoComplete="tel" value={phone} onChange={(event) => setPhone(event.target.value)} placeholder="+961 70 123 456" required className={inputClass} /></div>
+                    <div className="relative"><Smartphone className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" /><input name="phone" data-sensitive="true" type="tel" inputMode="tel" autoComplete="tel" value={phone} onChange={(event) => setPhone(event.target.value)} placeholder="+961 70 123 456" required={!import.meta.env.DEV} className={inputClass} /></div>
+                    {import.meta.env.DEV && <p className="mt-2 text-xs text-muted-foreground">Optional for local staff/dean testing. Required in production.</p>}
                   </label>
                   <p className="text-xs leading-5 text-muted-foreground">
                     {t(

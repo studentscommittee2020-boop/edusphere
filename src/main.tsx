@@ -8,8 +8,8 @@ import { isSupabaseConfigured } from "./lib/supabase.ts";
 import { initSentry } from "./lib/sentry.ts";
 import { initTelemetry } from "./lib/telemetry.ts";
 
-// Diagnostics starts before render. Product analytics stays inert until the
-// visitor opts in through the in-app consent prompt.
+// Diagnostics and curated product analytics start before render. PostHog
+// remains inert only when its environment configuration is absent.
 initSentry();
 initTelemetry();
 
