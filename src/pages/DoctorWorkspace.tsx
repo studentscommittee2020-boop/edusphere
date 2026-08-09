@@ -68,7 +68,6 @@ import {
   type ExamSubmissionStatus,
 } from "@/services/teaching";
 import DoctorBookReviewPanel from "@/components/DoctorBookReviewPanel";
-import DoctorCourseSetup from "@/components/DoctorCourseSetup";
 import type { Assignment, AssignmentSubmission, Course, CourseMaterial, ExamType, PrintDocument, Track } from "@/types/database";
 
 const inputClass =
@@ -128,7 +127,6 @@ export default function DoctorWorkspace() {
   const [reviewingSubmissionId, setReviewingSubmissionId] = useState<string | null>(null);
   const [activeReviewSubmissionId, setActiveReviewSubmissionId] = useState<string | null>(null);
   const [openingSubmissionId, setOpeningSubmissionId] = useState<string | null>(null);
-  const [isCourseSetupOpen, setIsCourseSetupOpen] = useState(false);
   const [submitting, setSubmitting] = useState<"document" | "assignment" | "material" | "exam" | null>(
     null,
   );
@@ -379,34 +377,6 @@ export default function DoctorWorkspace() {
     <div className="min-h-screen relative">
       <div className="absolute inset-0 bg-mesh pointer-events-none" />
 
-      {/* Blocking first-login gate — no doctor_courses rows yet. Rendered
-          over the workspace (still mounted underneath) rather than instead
-          of it, so the moment it's satisfied the rest is already loaded. */}
-      {/* Re-openable edit — "Edit teaching courses" affordance below. */}
-      {teachingAssignments.length === 0 && (
-        <DoctorCourseSetup
-          doctorId={doctorId}
-          language={language}
-          mode="gate"
-          existing={[]}
-          onSaved={() => void load()}
-        />
-      )}
-
-      {isCourseSetupOpen && teachingAssignments.length > 0 && (
-        <DoctorCourseSetup
-          doctorId={doctorId}
-          language={language}
-          mode="edit"
-          existing={teachingAssignments}
-          onSaved={() => {
-            setIsCourseSetupOpen(false);
-            void load();
-          }}
-          onClose={() => setIsCourseSetupOpen(false)}
-        />
-      )}
-
       <main className="relative max-w-7xl mx-auto px-4 sm:px-6 py-8 sm:py-10 space-y-7">
         <motion.header
           initial={{ opacity: 0, y: 15 }}
@@ -441,9 +411,7 @@ export default function DoctorWorkspace() {
           </div>
         </motion.header>
 
-        {/* ── Teaching courses summary ────────────────────────────────────
-            doctor_courses (migration 012) scopes what this doctor can
-            publish to and whose roster they can see — see DoctorCourseSetup. */}
+        {/* University-verified teaching assignments scope every doctor action. */}
         <motion.section
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
@@ -456,22 +424,12 @@ export default function DoctorWorkspace() {
             <p className="font-display font-bold text-sm text-foreground">
               {isFr ? "Vos cours enseignés" : "Your teaching courses"}
             </p>
-            <p className="text-xs text-muted-foreground truncate">
-              {taughtCourses.length === 0
-                ? isFr ? "Aucun cours sélectionné." : "No courses selected."
-                : taughtCourses.map((course) => courseTitle(course)).join(" · ")}
-            </p>
+            {teachingAssignments.length === 0 ? <p className="text-xs text-amber-300 mt-1">{isFr ? "Aucune attribution universitaire active. Contactez le conseil pour synchroniser votre dossier." : "No active university assignment. Ask the council to synchronize your university record."}</p> : <div className="flex flex-wrap gap-1.5 mt-2">{teachingAssignments.map((assignment) => <span key={assignment.id} className="rounded-full border border-border bg-background/50 px-2.5 py-1 text-[11px] text-foreground">{assignment.courses ? courseTitle(assignment.courses) : assignment.course_id} · {assignment.semester} · {assignment.courses?.track === "english" ? "English" : "French"} · {assignment.academic_year}</span>)}</div>}
           </div>
           <p className="shrink-0 text-[11px] text-muted-foreground max-w-48 text-right">
             {isFr ? "Attribués par l’emploi du temps universitaire." : "Assigned from the university schedule."}
           </p>
-          <button
-            type="button"
-            onClick={() => setIsCourseSetupOpen(true)}
-            className="shrink-0 rounded-lg border border-border px-3 py-2 text-xs font-display font-bold text-foreground transition-colors hover:bg-white/[0.06] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500/50"
-          >
-            {isFr ? "Modifier les cours" : "Edit teaching courses"}
-          </button>
+          <span className="shrink-0 rounded-lg border border-green-500/30 bg-green-500/10 px-3 py-2 text-xs font-display font-bold text-green-300">{isFr ? "Vérifié par l’université" : "University verified"}</span>
         </motion.section>
 
         <DoctorBookReviewPanel doctorId={doctorId} assignments={teachingAssignments} />

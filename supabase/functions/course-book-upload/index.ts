@@ -53,6 +53,7 @@ Deno.serve(async (request) => {
   const courseId = String(form?.get("courseId") ?? "").trim();
   const originalBookId = String(form?.get("originalBookId") ?? "").trim();
   const doctorCourseId = String(form?.get("doctorCourseId") ?? "").trim();
+  const doctorCourseIdsRaw = String(form?.get("doctorCourseIds") ?? "").trim();
   const rejectionReason = String(form?.get("rejectionReason") ?? "").trim();
 
   if (!(file instanceof File) || title.length < 2 || title.length > 200) {
@@ -65,7 +66,18 @@ Deno.serve(async (request) => {
   if (!signatureMatches(sample, file.type)) {
     return reply({ error: "The file contents do not match the declared PDF or PowerPoint format" }, 400);
   }
-  if ((originalBookId && !doctorCourseId) || (!originalBookId && !courseId)) {
+  let doctorCourseIds: string[] = [];
+  if (doctorCourseIdsRaw) {
+    try {
+      const parsed = JSON.parse(doctorCourseIdsRaw);
+      if (Array.isArray(parsed) && parsed.every((value) => typeof value === "string")) {
+        doctorCourseIds = [...new Set(parsed.map((value) => value.trim()).filter(Boolean))];
+      }
+    } catch {
+      doctorCourseIds = [];
+    }
+  }
+  if ((originalBookId && !doctorCourseId) || (!originalBookId && (!courseId || doctorCourseIds.length < 1))) {
     return reply({ error: "Invalid book upload request" }, 400);
   }
 
@@ -88,8 +100,9 @@ Deno.serve(async (request) => {
         p_size_bytes: file.size,
         p_rejection_reason: rejectionReason,
       })
-    : await userClient.rpc("upload_course_book", {
+    : await userClient.rpc("upload_course_book_for_assignments", {
         p_course_id: courseId,
+        p_doctor_course_ids: doctorCourseIds,
         p_title: title,
         p_storage_path: path,
         p_original_name: file.name,

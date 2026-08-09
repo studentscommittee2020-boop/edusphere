@@ -19,8 +19,3 @@ export function isPreparedReviewEmail(email: string | null | undefined): boolean
 export function canBypassReviewPhone(email: string | null | undefined): boolean {
   return isPreparedReviewEmail(email);
 }
-
-/** Explicitly authorized for the temporary dean review, including Production. */
-export function canBypassReviewMfa(email: string | null | undefined): boolean {
-  return isPreparedReviewEmail(email);
-}

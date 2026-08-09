@@ -538,7 +538,6 @@ export default function OwnerConsole() {
               <SnapshotStat label={isFr ? "Inscriptions" : "Enrolments"} value={snapshot.enrollments} />
               <SnapshotStat label={isFr ? "Séances" : "Schedule"} value={snapshot.scheduleEntries} />
               <SnapshotStat label={isFr ? "Rendus" : "Submissions"} value={snapshot.submissions} />
-              <SnapshotStat label={isFr ? "Favoris" : "Favourites"} value={snapshot.favorites} />
             </dl>
 
             <p className="text-xs text-muted-foreground">

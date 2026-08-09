@@ -73,8 +73,8 @@ export const MOCK_ACCOUNTS: MockAccount[] = [
     isAdmin: true,
     isDoctor: false,
     isCommitteeAdmin: false,
-    // Owner inherits every surface, including the student ones.
-    isVerifiedStudent: true,
+    // Staff preview accounts keep role-correct navigation.
+    isVerifiedStudent: false,
     profile: mockProfile({
       id: "00000000-0000-4000-8000-000000000001",
       full_name: "Elie (Owner)",

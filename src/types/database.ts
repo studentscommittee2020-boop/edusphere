@@ -629,42 +629,6 @@ export type Database = {
         ];
       };
 
-      favorites: {
-        Row: {
-          id: string;
-          user_id: string;
-          item_type: "previous_exam" | "entrance_exam" | "book" | "event";
-          item_id: string;
-          created_at: string;
-          updated_at: string;
-        };
-        Insert: {
-          id?: string;
-          user_id: string;
-          item_type: "previous_exam" | "entrance_exam" | "book" | "event";
-          item_id: string;
-          created_at?: string;
-          updated_at?: string;
-        };
-        Update: {
-          id?: string;
-          user_id?: string;
-          item_type?: "previous_exam" | "entrance_exam" | "book" | "event";
-          item_id?: string;
-          created_at?: string;
-          updated_at?: string;
-        };
-        Relationships: [
-          {
-            foreignKeyName: "favorites_user_id_fkey";
-            columns: ["user_id"];
-            isOneToOne: false;
-            referencedRelation: "profiles";
-            referencedColumns: ["id"];
-          },
-        ];
-      };
-
       owner_emails: {
         Row: {
           id: string;
@@ -1407,17 +1371,6 @@ export type Database = {
           total_materials: number;
         };
       };
-      get_user_dashboard_stats: {
-        Args: { p_major?: string | null; p_semester?: string | null };
-        Returns: {
-          exams_for_major: number;
-          exams_for_semester: number;
-          upcoming_events: number;
-          user_favorites: number;
-          enrolled_courses: number;
-          pending_assignments: number;
-        };
-      };
       get_recommended_exams: {
         Args: { p_major: string; p_semester?: string | null; p_limit?: number };
         Returns: Database["public"]["Tables"]["previous_exams"]["Row"][];
@@ -1460,10 +1413,6 @@ export type Database = {
       end_impersonation: {
         Args: Record<PropertyKey, never>;
         Returns: undefined;
-      };
-      set_doctor_courses: {
-        Args: { p_assignments: Json };
-        Returns: Database["public"]["Tables"]["doctor_courses"]["Row"][];
       };
       can_read_exam_submission: {
         Args: { p_storage_path: string };
@@ -1538,7 +1487,6 @@ export type EntranceExam = Tables<"entrance_exams">;
 export type Event = Tables<"events">;
 export type EventRegistration = Tables<"event_registrations">;
 export type AdminEmail = Tables<"admin_emails">;
-export type Favorite = Tables<"favorites">;
 export type PrintDocument = Tables<"print_documents">;
 export type Assignment = Tables<"assignments">;
 export type AssignmentSubmission = Tables<"assignment_submissions">;

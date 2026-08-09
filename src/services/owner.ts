@@ -30,7 +30,6 @@ export const OWNER_TABLES = [
   "entrance_exams",
   "events",
   "event_registrations",
-  "favorites",
   "print_documents",
   "assignments",
   "assignment_submissions",
@@ -112,7 +111,6 @@ export interface AccountSnapshot {
   enrollments: number;
   scheduleEntries: number;
   submissions: number;
-  favorites: number;
   lastSyncedAt: string | null;
 }
 
@@ -122,7 +120,7 @@ export interface AccountSnapshot {
  * minted and no action can be taken as the user.
  */
 export async function getAccountSnapshot(userId: string): Promise<AccountSnapshot> {
-  const [profile, enrollments, schedule, submissions, favorites, syncState] =
+  const [profile, enrollments, schedule, submissions, syncState] =
     await Promise.all([
       supabase.from("profiles").select("*").eq("id", userId).maybeSingle(),
       supabase
@@ -138,10 +136,6 @@ export async function getAccountSnapshot(userId: string): Promise<AccountSnapsho
         .select("*", { count: "exact", head: true })
         .eq("student_id", userId),
       supabase
-        .from("favorites")
-        .select("*", { count: "exact", head: true })
-        .eq("user_id", userId),
-      supabase
         .from("academic_sync_state")
         .select("last_synced_at")
         .eq("student_id", userId)
@@ -153,7 +147,6 @@ export async function getAccountSnapshot(userId: string): Promise<AccountSnapsho
     enrollments: enrollments.count ?? 0,
     scheduleEntries: schedule.count ?? 0,
     submissions: submissions.count ?? 0,
-    favorites: favorites.count ?? 0,
     lastSyncedAt: syncState.data?.last_synced_at ?? null,
   };
 }

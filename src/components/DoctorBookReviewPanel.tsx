@@ -105,7 +105,7 @@ export default function DoctorBookReviewPanel({ doctorId, assignments }: {
               </div>
               <div className="flex flex-wrap gap-2">
                 <button type="button" onClick={() => void open(book)} className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg surface-interactive text-xs font-semibold"><Download className="w-3.5 h-3.5" />Open</button>
-                {!privateReplacement && !review && <>
+                {!privateReplacement && review?.status === "pending" && <>
                   <button type="button" disabled={busy === book.id} onClick={() => void confirm(book, assignment)} className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-gradient-green text-white text-xs font-semibold disabled:opacity-50"><CheckCircle2 className="w-3.5 h-3.5" />Confirm</button>
                   <button type="button" disabled={busy === book.id} onClick={() => setReplacementFor({ book, assignment })} className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-red-600/15 text-red-300 text-xs font-semibold"><XCircle className="w-3.5 h-3.5" />Reject and replace</button>
                 </>}

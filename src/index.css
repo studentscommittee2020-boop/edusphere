@@ -117,26 +117,28 @@
   }
 
   :root[data-theme="light"] {
-    --surface-0: 220 33% 97%;
-    --surface-1: 0 0% 100%;
-    --surface-2: 220 28% 98%;
-    --surface-3: 220 22% 94%;
-    --surface-4: 220 18% 88%;
-    --foreground: 225 20% 15%;
-    --muted-foreground: 225 10% 40%;
-    --border: 220 16% 84%;
-    --border-strong: 220 16% 74%;
-    --sidebar-background: 0 0% 100%;
-    --atmosphere-red-alpha: 0.32;
-    --atmosphere-green-alpha: 0.26;
-    --atmosphere-accent-alpha: 0.20;
-    --atmosphere-grid: var(--foreground);
-    --atmosphere-grid-alpha: 0.075;
-    --atmosphere-dots-alpha: 0.14;
+    /* High-contrast mode deliberately keeps a black canvas. Brightness comes
+       from clearer surfaces, borders and type—not a white page that erases
+       the red/green atmosphere and animated background. */
+    --surface-0: 225 14% 3%;
+    --surface-1: 225 12% 8%;
+    --surface-2: 225 11% 12%;
+    --surface-3: 225 10% 17%;
+    --surface-4: 225 9% 23%;
+    --foreground: 0 0% 100%;
+    --muted-foreground: 220 11% 72%;
+    --border: 220 10% 25%;
+    --border-strong: 220 11% 36%;
+    --sidebar-background: var(--surface-1);
+    --atmosphere-red-alpha: 0.30;
+    --atmosphere-green-alpha: 0.24;
+    --atmosphere-accent-alpha: 0.16;
+    --atmosphere-grid: 0 0% 100%;
+    --atmosphere-grid-alpha: 0.055;
+    --atmosphere-dots-alpha: 0.10;
   }
 
-  /* Light mode keeps the same living atmosphere as dark mode, with enough
-     contrast to remain visible behind white surfaces. */
+  /* High-contrast mode keeps the same living atmosphere over a black canvas. */
   :root[data-theme="light"] .bg-mesh {
     background:
       radial-gradient(ellipse 80% 60% at 15% 20%, hsl(var(--red-600) / 0.20) 0%, transparent 60%),
@@ -163,6 +165,24 @@
     font-family: var(--font-body);
     font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
     text-rendering: optimizeLegibility;
+  }
+
+  [data-sonner-toast].edusphere-toast {
+    min-height: 64px;
+    border: 1px solid hsl(var(--border-strong)) !important;
+    background: hsl(var(--surface-2) / 0.98) !important;
+    color: hsl(var(--foreground)) !important;
+    box-shadow: 0 18px 50px -18px hsl(0 0% 0% / 0.85), 0 0 0 1px hsl(var(--foreground) / 0.04) !important;
+    backdrop-filter: blur(18px);
+  }
+
+  [data-sonner-toast].edusphere-toast[data-type="error"] {
+    border-color: hsl(var(--red-400) / 0.9) !important;
+    box-shadow: 0 18px 50px -18px hsl(var(--red-600) / 0.55), 0 0 0 1px hsl(var(--red-500) / 0.35) !important;
+  }
+
+  [data-sonner-toast].edusphere-toast[data-type="success"] {
+    border-color: hsl(var(--green-500) / 0.85) !important;
   }
 
   html, body, .surface, .surface-raised, .surface-interactive, .glass {

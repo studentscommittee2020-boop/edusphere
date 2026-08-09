@@ -1,10 +1,10 @@
-import { lazy, Suspense, useEffect, useLayoutEffect } from "react";
+import { lazy, Suspense, useLayoutEffect } from "react";
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { Toaster } from "sonner";
 import Layout from "./components/Layout";
 import { useAuth } from "./contexts/AuthContext";
 import { trackPageView } from "./lib/telemetry";
-import { canBypassReviewMfa, canBypassReviewPhone } from "./lib/reviewAccess";
+import { canBypassReviewPhone } from "./lib/reviewAccess";
 import { useAppStore } from "./store/appStore";
 
 // ── Page imports (lazy for code splitting) ────────────────────────────────────
@@ -73,19 +73,19 @@ function OwnerRoute({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
-/** A signed-in account must complete its authenticator-app challenge before
-    any authenticated portal screen is rendered. Public pages remain public. */
+/** Phone setup remains mandatory, while authenticator MFA is opt-in. Once an
+    account enables a factor, its AAL1 sessions must still complete it. */
 function MfaGate({ children }: { children: React.ReactNode }) {
-  const { user, isAuthenticated, isLoading, isMfaVerified, profile, isAdmin, isOwner, isDoctor, isCommitteeAdmin } = useAuth();
+  const { user, isAuthenticated, isLoading, hasMfaFactor, isMfaVerified, profile, isAdmin, isOwner, isDoctor, isCommitteeAdmin } = useAuth();
   const location = useLocation();
   if (isLoading) return <PageLoader />;
   // The four prepared staff accounts have an explicitly authorized temporary
   // review exception. Role verification prevents this email allow-list from
   // applying to a non-staff account.
   const isStaffAccount = isAdmin || isOwner || isDoctor || isCommitteeAdmin;
-  const reviewMfaBypass = isStaffAccount && canBypassReviewMfa(user?.email);
   const phoneIsRequired = !(isStaffAccount && canBypassReviewPhone(user?.email));
-  if (isAuthenticated && ((!reviewMfaBypass && !isMfaVerified) || (phoneIsRequired && !profile?.phone))) {
+  const mfaChallengeRequired = hasMfaFactor && !isMfaVerified;
+  if (isAuthenticated && (mfaChallengeRequired || (phoneIsRequired && !profile?.phone))) {
     return <Navigate to="/auth" replace state={{ next: location.pathname }} />;
   }
   return <>{children}</>;
@@ -106,18 +106,24 @@ function RouteTelemetry() {
 export default function App() {
   const theme = useAppStore((state) => state.theme);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     document.documentElement.dataset.theme = theme;
-    document.documentElement.style.colorScheme = theme;
+    // Both palettes use a black canvas; keep native inputs/scrollbars dark so
+    // the high-contrast variant never flashes white browser chrome.
+    document.documentElement.style.colorScheme = "dark";
   }, [theme]);
 
   return (
     <BrowserRouter>
       <RouteTelemetry />
       <Toaster
-        position="bottom-right"
+        position="top-right"
+        richColors
+        closeButton
+        visibleToasts={5}
+        duration={7000}
         toastOptions={{
-          className: "surface edusphere-toast",
+          className: "edusphere-toast",
         }}
       />
       <Suspense fallback={<PageLoader />}>

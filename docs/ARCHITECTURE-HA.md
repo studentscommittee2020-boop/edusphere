@@ -191,7 +191,7 @@ TABLES`:
 CREATE PUBLICATION edusphere_primary_pub
   FOR TABLE
     public.profiles, public.courses, public.previous_exams, public.entrance_exams,
-    public.course_materials, public.print_documents, public.favorites,
+    public.course_materials, public.print_documents,
     public.exam_reports, public.exam_download_events, public.schedule_entries
     -- ...every application table under public that the fallback should be able to
     -- serve reads from. Enumerate explicitly; do not use FOR ALL TABLES.
@@ -349,7 +349,7 @@ fallback → automatic failback. See §7 for the exact mechanism and why those t
 | Browsing anything gated by `is_verified_student()`/per-user RLS | **`[UNVERIFIED]` — depends entirely on §6.1** | These RLS checks resolve `auth.uid()` from the JWT; whether the fallback accepts primary's JWT is the open question in §6.1 |
 | File downloads (signed URLs) | Works for files that have finished mirroring (§3); 404/error for files uploaded since the last successful mirror pass | Storage mirroring lag |
 | New sign-in / sign-up | **Never works** — by design | Auth is pinned to primary always (§7); this is intentional, matching Supabase's own Read Replica architecture |
-| Submissions, ratings, favorites, uploads, `university-sync` invoke | Blocked | `assertWritable()` (opt-in, see §6.2 for the enforcement gap) / recommended DB-level REVOKE on the fallback |
+| Submissions, ratings, uploads, `university-sync` invoke | Blocked | `assertWritable()` (opt-in, see §6.2 for the enforcement gap) / recommended DB-level REVOKE on the fallback |
 | Session persistence for already-signed-in users | Client-side session object persists (it's just in `localStorage`/memory); whether it's still *useful* against the fallback is the §6.1 question | supabase-js doesn't clear a session just because a query 401s |
 
 **Operator checklist when failover is observed (via monitoring/alerting on the console.error the

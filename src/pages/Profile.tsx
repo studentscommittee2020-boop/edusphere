@@ -8,15 +8,12 @@ import {
   Calendar,
   Globe,
   Library,
-  Heart,
   Clock,
   Trash2,
   LogOut,
   ChevronRight,
   AlertTriangle,
   Package,
-  BookOpen,
-  FileText,
   ArrowLeft,
   KeyRound,
   Moon,
@@ -29,7 +26,9 @@ import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 import { useAppStore } from "@/store/appStore";
 import { supabase } from "@/lib/supabase";
-import type { Favorite, Profile as UserProfile, StudentEnrollment } from "@/types/database";
+import { courseTitle } from "@/services/academics";
+import { getDoctorCourses, type DoctorCourseWithCourse } from "@/services/teaching";
+import type { Profile as UserProfile, StudentEnrollment } from "@/types/database";
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -60,13 +59,13 @@ type EditableProfileSettings = {
 
 export default function Profile() {
   const navigate = useNavigate();
-  const { user, profile, isAuthenticated, isLoading, isMfaVerified, signOut, updateProfile } = useAuth();
+  const { user, profile, isAuthenticated, isLoading, hasMfaFactor, signOut, updateProfile } = useAuth();
   const { language, theme, setLanguage, setTheme } = useAppStore();
   const isFr = language === "fr";
 
   const [enrollments, setEnrollments] = useState<StudentEnrollment[]>([]);
-  const [favorites, setFavorites] = useState<Favorite[]>([]);
-  const [activeTab, setActiveTab] = useState<"profile" | "courses" | "favorites">("profile");
+  const [teachingAssignments, setTeachingAssignments] = useState<DoctorCourseWithCourse[]>([]);
+  const [activeTab, setActiveTab] = useState<"profile" | "courses">("profile");
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState("");
   const [deleting, setDeleting] = useState(false);
@@ -85,21 +84,22 @@ export default function Profile() {
   // Load user data
   useEffect(() => {
     if (!user) return;
-
-    supabase
-      .from("student_enrollments")
-      .select("*")
-      .eq("student_id", user.id)
-      .order("academic_year", { ascending: false })
-      .then(({ data }) => setEnrollments(data ?? []));
-
-    supabase
-      .from("favorites")
-      .select("*")
-      .eq("user_id", user.id)
-      .order("created_at", { ascending: false })
-      .then(({ data }) => setFavorites(data ?? []));
-  }, [user]);
+    if (profile?.role === "student") {
+      supabase
+        .from("student_enrollments")
+        .select("*")
+        .eq("student_id", user.id)
+        .order("academic_year", { ascending: false })
+        .then(({ data }) => setEnrollments(data ?? []));
+    } else {
+      setEnrollments([]);
+    }
+    if (profile?.role === "doctor") {
+      getDoctorCourses(user.id).then(({ data }) => setTeachingAssignments(data));
+    } else {
+      setTeachingAssignments([]);
+    }
+  }, [user, profile?.role]);
 
   useEffect(() => {
     setSettings({
@@ -135,7 +135,7 @@ export default function Profile() {
 
     setDeleting(true);
     try {
-      // Delete profile (cascades favorites, cart, registrations via RLS)
+      // Delete profile (cascades registrations and other owned portal rows via RLS)
       await supabase.from("profiles").delete().eq("id", user.id);
       await signOut();
       navigate("/", { replace: true });
@@ -160,9 +160,13 @@ export default function Profile() {
     const { error } = await updateProfile({
       full_name: settings.full_name.trim(),
       phone: settings.phone.trim() || null,
-      major: settings.major || null,
-      semester: settings.semester || null,
-      track: settings.track || null,
+      ...(profile?.role === "student"
+        ? {
+            major: settings.major || null,
+            semester: settings.semester || null,
+            track: settings.track || null,
+          }
+        : {}),
     });
     setSavingSettings(false);
     if (error) {
@@ -179,6 +183,10 @@ export default function Profile() {
     else toast.success(isFr ? "Un lien de réinitialisation a été envoyé." : "A password-reset link has been sent.");
   }
 
+  function handleMfaSetup() {
+    navigate("/auth", { state: { next: "/profile", setupMfa: true } });
+  }
+
   async function handleSignOut() {
     await signOut();
     navigate("/auth", { replace: true });
@@ -192,10 +200,13 @@ export default function Profile() {
     );
   }
 
+  const isStudentProfile = profile?.role === "student";
+  const isDoctorProfile = profile?.role === "doctor";
   const tabs = [
     { id: "profile" as const, label: isFr ? "Profil" : "Profile", icon: User },
-    { id: "courses" as const, label: isFr ? "Mes Cours" : "My Courses", icon: Library },
-    { id: "favorites" as const, label: isFr ? "Favoris" : "Favorites", icon: Heart },
+    ...(isStudentProfile
+      ? [{ id: "courses" as const, label: isFr ? "Mes Cours" : "My Courses", icon: Library }]
+      : []),
   ];
 
   // ── Render ─────────────────────────────────────────────────────────────────
@@ -291,16 +302,28 @@ export default function Profile() {
                 <div className="grid gap-4 sm:grid-cols-2">
                   <label className="block sm:col-span-2"><span className="mb-2 block text-xs font-display font-bold uppercase tracking-[0.14em] text-muted-foreground">{isFr ? "Nom complet" : "Full name"}</span><input value={settings.full_name} onChange={(event) => setSettings((current) => ({ ...current, full_name: event.target.value }))} required className="w-full rounded-xl border border-border bg-input px-4 py-3 text-sm text-foreground outline-none focus:ring-2 focus:ring-primary/40" /></label>
                   <label className="block"><span className="mb-2 block text-xs font-display font-bold uppercase tracking-[0.14em] text-muted-foreground">{isFr ? "Téléphone" : "Phone number"}</span><div className="relative"><Smartphone className="absolute left-4 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" /><input type="tel" inputMode="tel" autoComplete="tel" value={settings.phone} onChange={(event) => setSettings((current) => ({ ...current, phone: event.target.value }))} placeholder="+961 70 123 456" className="w-full rounded-xl border border-border bg-input py-3 pl-11 pr-4 text-sm text-foreground outline-none focus:ring-2 focus:ring-primary/40" /></div></label>
-                  <label className="block"><span className="mb-2 block text-xs font-display font-bold uppercase tracking-[0.14em] text-muted-foreground">{isFr ? "Filière" : "Major"}</span><select value={settings.major} onChange={(event) => setSettings((current) => ({ ...current, major: event.target.value as EditableProfileSettings["major"] }))} className="w-full rounded-xl border border-border bg-input px-4 py-3 text-sm text-foreground outline-none focus:ring-2 focus:ring-primary/40"><option value="">{isFr ? "Non défini" : "Not set"}</option><option value="Common">Common</option><option value="Management">Management</option><option value="Marketing">Marketing</option><option value="Audit & Accounting">Audit & Accounting</option><option value="Finance">Finance</option><option value="MIS">MIS</option></select></label>
-                  <label className="block"><span className="mb-2 block text-xs font-display font-bold uppercase tracking-[0.14em] text-muted-foreground">{isFr ? "Semestre" : "Semester"}</span><select value={settings.semester} onChange={(event) => setSettings((current) => ({ ...current, semester: event.target.value as EditableProfileSettings["semester"] }))} className="w-full rounded-xl border border-border bg-input px-4 py-3 text-sm text-foreground outline-none focus:ring-2 focus:ring-primary/40"><option value="">{isFr ? "Non défini" : "Not set"}</option>{["LS1", "LS2", "LS3", "LS4", "LS5", "LS6", "LS7", "LS8", "LS9"].map((value) => <option key={value} value={value}>{value}</option>)}</select></label>
-                  <label className="block"><span className="mb-2 block text-xs font-display font-bold uppercase tracking-[0.14em] text-muted-foreground">{isFr ? "Langue d'enseignement" : "Teaching language"}</span><select value={settings.track} onChange={(event) => setSettings((current) => ({ ...current, track: event.target.value as "" | "french" | "english" }))} className="w-full rounded-xl border border-border bg-input px-4 py-3 text-sm text-foreground outline-none focus:ring-2 focus:ring-primary/40"><option value="">{isFr ? "Non défini" : "Not set"}</option><option value="french">{isFr ? "Français" : "French"}</option><option value="english">{isFr ? "Anglais" : "English"}</option></select></label>
+                  {isStudentProfile && <>
+                    <label className="block"><span className="mb-2 block text-xs font-display font-bold uppercase tracking-[0.14em] text-muted-foreground">{isFr ? "Filière" : "Major"}</span><select value={settings.major} onChange={(event) => setSettings((current) => ({ ...current, major: event.target.value as EditableProfileSettings["major"] }))} className="w-full rounded-xl border border-border bg-input px-4 py-3 text-sm text-foreground outline-none focus:ring-2 focus:ring-primary/40"><option value="">{isFr ? "Non défini" : "Not set"}</option><option value="Common">Common</option><option value="Management">Management</option><option value="Marketing">Marketing</option><option value="Audit & Accounting">Audit & Accounting</option><option value="Finance">Finance</option><option value="MIS">MIS</option></select></label>
+                    <label className="block"><span className="mb-2 block text-xs font-display font-bold uppercase tracking-[0.14em] text-muted-foreground">{isFr ? "Semestre" : "Semester"}</span><select value={settings.semester} onChange={(event) => setSettings((current) => ({ ...current, semester: event.target.value as EditableProfileSettings["semester"] }))} className="w-full rounded-xl border border-border bg-input px-4 py-3 text-sm text-foreground outline-none focus:ring-2 focus:ring-primary/40"><option value="">{isFr ? "Non défini" : "Not set"}</option>{["LS1", "LS2", "LS3", "LS4", "LS5", "LS6", "LS7", "LS8", "LS9"].map((value) => <option key={value} value={value}>{value}</option>)}</select></label>
+                    <label className="block"><span className="mb-2 block text-xs font-display font-bold uppercase tracking-[0.14em] text-muted-foreground">{isFr ? "Langue d'enseignement" : "Teaching language"}</span><select value={settings.track} onChange={(event) => setSettings((current) => ({ ...current, track: event.target.value as "" | "french" | "english" }))} className="w-full rounded-xl border border-border bg-input px-4 py-3 text-sm text-foreground outline-none focus:ring-2 focus:ring-primary/40"><option value="">{isFr ? "Non défini" : "Not set"}</option><option value="french">{isFr ? "Français" : "French"}</option><option value="english">{isFr ? "Anglais" : "English"}</option></select></label>
+                  </>}
                 </div>
                 <div className="mt-5 flex justify-end"><button type="submit" disabled={savingSettings} className="btn-primary min-h-11 px-5 text-sm disabled:opacity-50">{savingSettings ? (isFr ? "Enregistrement…" : "Saving…") : (isFr ? "Enregistrer les modifications" : "Save changes")}</button></div>
               </section>
 
-              <section className="surface p-5 sm:p-6"><div className="mb-4 flex items-center gap-3"><span className="flex size-10 items-center justify-center rounded-xl bg-primary/10"><ShieldCheck className="size-5 text-primary" /></span><div><h2 className="font-display text-lg font-bold text-foreground">{isFr ? "Sécurité du compte" : "Account security"}</h2><p className="text-xs text-muted-foreground">{isFr ? "Gérez vos méthodes de connexion." : "Manage your sign-in methods."}</p></div></div><div className="grid gap-3 sm:grid-cols-2"><div className="rounded-xl border border-border bg-muted/30 p-4"><p className="text-xs text-muted-foreground">{isFr ? "Adresse e-mail" : "Email address"}</p><p className="mt-1 truncate text-sm font-medium text-foreground">{user?.email ?? "—"}</p></div><div className="rounded-xl border border-border bg-muted/30 p-4"><p className="text-xs text-muted-foreground">{isFr ? "Authentification à deux facteurs" : "Two-factor authentication"}</p><p className="mt-1 text-sm font-medium text-foreground">{isMfaVerified ? (isFr ? "Activée" : "Enabled") : (isFr ? "À configurer" : "Needs setup")}</p></div></div><button type="button" onClick={() => void handlePasswordReset()} className="mt-4 inline-flex min-h-11 items-center gap-2 rounded-xl border border-border px-4 text-sm font-display font-bold text-foreground hover:bg-muted"><KeyRound className="size-4" />{isFr ? "Envoyer un lien de réinitialisation" : "Send password-reset link"}</button></section>
+              <section className="surface p-5 sm:p-6">
+                <div className="mb-4 flex items-center gap-3"><span className="flex size-10 items-center justify-center rounded-xl bg-primary/10"><ShieldCheck className="size-5 text-primary" /></span><div><h2 className="font-display text-lg font-bold text-foreground">{isFr ? "Sécurité du compte" : "Account security"}</h2><p className="text-xs text-muted-foreground">{isFr ? "L'application d'authentification est facultative." : "The authenticator app is optional."}</p></div></div>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <div className="rounded-xl border border-border bg-muted/30 p-4"><p className="text-xs text-muted-foreground">{isFr ? "Adresse e-mail" : "Email address"}</p><p className="mt-1 truncate text-sm font-medium text-foreground">{user?.email ?? "—"}</p></div>
+                  <div className="rounded-xl border border-border bg-muted/30 p-4"><p className="text-xs text-muted-foreground">{isFr ? "Application d'authentification" : "Authenticator app"}</p><p className="mt-1 text-sm font-medium text-foreground">{hasMfaFactor ? (isFr ? "Activée · facultative" : "Enabled · optional") : (isFr ? "Non activée · facultative" : "Not enabled · optional")}</p></div>
+                </div>
+                <div className="mt-4 flex flex-wrap gap-2">
+                  {!hasMfaFactor && <button type="button" onClick={handleMfaSetup} className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-primary/30 bg-primary/10 px-4 text-sm font-display font-bold text-foreground hover:bg-primary/15"><ShieldCheck className="size-4" />{isFr ? "Activer l'authentificateur" : "Enable authenticator"}</button>}
+                  <button type="button" onClick={() => void handlePasswordReset()} className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-border px-4 text-sm font-display font-bold text-foreground hover:bg-muted"><KeyRound className="size-4" />{isFr ? "Envoyer un lien de réinitialisation" : "Send password-reset link"}</button>
+                </div>
+              </section>
 
-              <section className="surface p-5 sm:p-6"><div className="mb-4 flex items-center gap-3"><span className="flex size-10 items-center justify-center rounded-xl bg-primary/10"><Globe className="size-5 text-primary" /></span><div><h2 className="font-display text-lg font-bold text-foreground">{isFr ? "Préférences" : "Preferences"}</h2><p className="text-xs text-muted-foreground">{isFr ? "Ces choix sont enregistrés dans ce navigateur." : "These choices are saved in this browser."}</p></div></div><div className="grid gap-4 sm:grid-cols-2"><div><p className="mb-2 text-xs font-display font-bold uppercase tracking-[0.14em] text-muted-foreground">{isFr ? "Langue de l'interface" : "Interface language"}</p><div className="flex rounded-xl bg-muted p-1"><button type="button" onClick={() => setLanguage("en")} className={`min-h-10 flex-1 rounded-lg text-sm font-semibold ${language === "en" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground"}`}>English</button><button type="button" onClick={() => setLanguage("fr")} className={`min-h-10 flex-1 rounded-lg text-sm font-semibold ${language === "fr" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground"}`}>Français</button></div></div><div><p className="mb-2 text-xs font-display font-bold uppercase tracking-[0.14em] text-muted-foreground">{isFr ? "Apparence" : "Appearance"}</p><div className="flex rounded-xl bg-muted p-1"><button type="button" onClick={() => setTheme("dark")} className={`inline-flex min-h-10 flex-1 items-center justify-center gap-2 rounded-lg text-sm font-semibold ${theme === "dark" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground"}`}><Moon className="size-4" />{isFr ? "Sombre" : "Dark"}</button><button type="button" onClick={() => setTheme("light")} className={`inline-flex min-h-10 flex-1 items-center justify-center gap-2 rounded-lg text-sm font-semibold ${theme === "light" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground"}`}><Sun className="size-4" />{isFr ? "Clair" : "Light"}</button></div></div></div></section>
+              <section className="surface p-5 sm:p-6"><div className="mb-4 flex items-center gap-3"><span className="flex size-10 items-center justify-center rounded-xl bg-primary/10"><Globe className="size-5 text-primary" /></span><div><h2 className="font-display text-lg font-bold text-foreground">{isFr ? "Préférences" : "Preferences"}</h2><p className="text-xs text-muted-foreground">{isFr ? "Ces choix sont enregistrés dans ce navigateur." : "These choices are saved in this browser."}</p></div></div><div className="grid gap-4 sm:grid-cols-2"><div><p className="mb-2 text-xs font-display font-bold uppercase tracking-[0.14em] text-muted-foreground">{isFr ? "Langue de l'interface" : "Interface language"}</p><div className="flex rounded-xl bg-muted p-1"><button type="button" onClick={() => setLanguage("en")} className={`min-h-10 flex-1 rounded-lg text-sm font-semibold ${language === "en" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground"}`}>English</button><button type="button" onClick={() => setLanguage("fr")} className={`min-h-10 flex-1 rounded-lg text-sm font-semibold ${language === "fr" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground"}`}>Français</button></div></div><div><p className="mb-2 text-xs font-display font-bold uppercase tracking-[0.14em] text-muted-foreground">{isFr ? "Apparence" : "Appearance"}</p><div className="flex rounded-xl bg-muted p-1"><button type="button" onClick={() => setTheme("dark")} className={`inline-flex min-h-10 flex-1 items-center justify-center gap-2 rounded-lg text-sm font-semibold ${theme === "dark" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground"}`}><Moon className="size-4" />{isFr ? "Sombre" : "Dark"}</button><button type="button" onClick={() => setTheme("light")} className={`inline-flex min-h-10 flex-1 items-center justify-center gap-2 rounded-lg text-sm font-semibold ${theme === "light" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground"}`}><Sun className="size-4" />{isFr ? "Contraste" : "High contrast"}</button></div></div></div></section>
             </form>
 
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
@@ -309,30 +332,23 @@ export default function Profile() {
                 label={isFr ? "Email" : "Email"}
                 value={user?.email ?? "—"}
               />
-              <InfoCard
-                icon={GraduationCap}
-                label={isFr ? "Filiere" : "Major"}
-                value={profile?.major ?? (isFr ? "Non defini" : "Not set")}
-              />
-              <InfoCard
-                icon={Calendar}
-                label={isFr ? "Semestre" : "Semester"}
-                value={profile?.semester ?? (isFr ? "Non defini" : "Not set")}
-              />
-              {/* Two independent settings, shown together so they are not
-                  mistaken for each other: the language your courses are TAUGHT
-                  in, and the language this site is DISPLAYED in. */}
-              <InfoCard
-                icon={GraduationCap}
-                label={isFr ? "Langue d'enseignement" : "Teaching language"}
-                value={
-                  profile?.track === "french"
-                    ? (isFr ? "Français" : "French")
-                    : profile?.track === "english"
-                      ? (isFr ? "Anglais" : "English")
-                      : "—"
-                }
-              />
+              {isStudentProfile && <>
+                <InfoCard
+                  icon={GraduationCap}
+                  label={isFr ? "Filiere" : "Major"}
+                  value={profile?.major ?? (isFr ? "Non defini" : "Not set")}
+                />
+                <InfoCard
+                  icon={Calendar}
+                  label={isFr ? "Semestre" : "Semester"}
+                  value={profile?.semester ?? (isFr ? "Non defini" : "Not set")}
+                />
+                <InfoCard
+                  icon={GraduationCap}
+                  label={isFr ? "Langue d'enseignement" : "Teaching language"}
+                  value={profile?.track === "french" ? (isFr ? "Français" : "French") : profile?.track === "english" ? (isFr ? "Anglais" : "English") : "—"}
+                />
+              </>}
               <InfoCard
                 icon={Globe}
                 label={isFr ? "Langue de l'interface" : "Interface language"}
@@ -343,12 +359,36 @@ export default function Profile() {
                 label={isFr ? "Membre depuis" : "Member since"}
                 value={profile?.created_at ? formatDate(profile.created_at) : "—"}
               />
-              <InfoCard
+              {isStudentProfile && <InfoCard
                 icon={Library}
                 label={isFr ? "Cours inscrits" : "Enrolled courses"}
                 value={String(enrollments.filter((e) => e.status === "enrolled").length)}
-              />
+              />}
             </div>
+
+            {isDoctorProfile && (
+              <section className="surface p-5 sm:p-6">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                  <div>
+                    <h2 className="font-display text-lg font-bold text-foreground">{isFr ? "Cours enseignés" : "Teaching assignments"}</h2>
+                    <p className="mt-1 text-xs text-muted-foreground">{isFr ? "Chaque cours conserve son semestre, sa filière et sa langue." : "Each course keeps its own semester, major, and teaching language."}</p>
+                  </div>
+                  <button type="button" onClick={() => navigate("/doctor")} className="inline-flex min-h-11 items-center justify-center rounded-xl border border-primary/30 bg-primary/10 px-4 text-sm font-display font-bold text-foreground hover:bg-primary/15">{isFr ? "Gérer les cours" : "Manage courses"}</button>
+                </div>
+                {teachingAssignments.length === 0 ? (
+                  <p className="mt-4 rounded-xl border border-dashed border-border p-4 text-sm text-muted-foreground">{isFr ? "Aucun cours vérifié pour le moment." : "No verified teaching assignments yet."}</p>
+                ) : (
+                  <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                    {teachingAssignments.map((assignment) => (
+                      <article key={assignment.id} className="rounded-xl border border-border bg-muted/25 p-4">
+                        <p className="font-display text-sm font-bold text-foreground">{assignment.courses ? courseTitle(assignment.courses) : assignment.course_id}</p>
+                        <p className="mt-1 text-xs text-muted-foreground">{assignment.semester} · {assignment.courses?.major ?? "—"} · {assignment.courses?.track === "french" ? "French" : "English"} · {assignment.academic_year}</p>
+                      </article>
+                    ))}
+                  </div>
+                )}
+              </section>
+            )}
 
             {/* Actions */}
             <div className="space-y-2 pt-4">
@@ -424,47 +464,6 @@ export default function Profile() {
           </motion.div>
         )}
 
-        {activeTab === "favorites" && (
-          <motion.div
-            key="favorites"
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-            className="space-y-3"
-          >
-            {favorites.length === 0 ? (
-              <EmptyState
-                icon={Heart}
-                text={isFr ? "Aucun favori" : "No favorites yet"}
-              />
-            ) : (
-              favorites.map((fav) => (
-                <div
-                  key={fav.id}
-                  className="surface flex items-center gap-3 p-4"
-                >
-                  <div className="w-10 h-10 rounded-lg bg-white/[0.06] flex items-center justify-center">
-                    {fav.item_type === "book" ? (
-                      <BookOpen className="w-5 h-5 text-green-400" />
-                    ) : fav.item_type === "previous_exam" || fav.item_type === "entrance_exam" ? (
-                      <FileText className="w-5 h-5 text-red-400" />
-                    ) : (
-                      <Calendar className="w-5 h-5 text-blue-400" />
-                    )}
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="text-foreground text-sm font-display font-semibold capitalize">
-                      {fav.item_type.replace("_", " ")}
-                    </p>
-                    <p className="text-muted-foreground text-xs">
-                      {formatDate(fav.created_at)}
-                    </p>
-                  </div>
-                </div>
-              ))
-            )}
-          </motion.div>
-        )}
       </AnimatePresence>
 
       {/* Delete account modal */}

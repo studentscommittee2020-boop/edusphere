@@ -79,29 +79,6 @@ export async function getDashboardStats() {
   return { data: data as DashboardStats | null, error };
 }
 
-// Must stay in sync with public.get_user_dashboard_stats(p_major, p_semester)
-// in supabase/migrations/010_remove_bookstore.sql — if that RPC's return
-// columns ever change, update this interface in the same commit.
-export interface UserDashboardStats {
-  exams_for_major: number;
-  exams_for_semester: number;
-  upcoming_events: number;
-  user_favorites: number;
-  enrolled_courses: number;
-  pending_assignments: number;
-}
-
-export async function getUserDashboardStats(
-  major?: string | null,
-  semester?: string | null
-) {
-  const { data, error } = await supabase.rpc("get_user_dashboard_stats", {
-    p_major: major ?? null,
-    p_semester: semester ?? null,
-  });
-  return { data: data as UserDashboardStats | null, error };
-}
-
 // ── Recommended Exams ─────────────────────────────────────────────────────────
 
 export async function getRecommendedExams(

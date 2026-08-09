@@ -44,11 +44,9 @@ apply in step 2) **irreversibly deletes**:
 - Every row in `books`, `cart_items`, `orders`, and `order_items` — the
   tables themselves are dropped (`DROP TABLE ... CASCADE`), not just
   emptied.
-- Every `favorites` row where `item_type = 'book'`.
 - The entire `book-covers` Storage bucket and every file in it.
-- The old `get_dashboard_stats()` / `get_user_dashboard_stats()` RPC
-  signatures (replaced with new ones that no longer report book/order
-  counts).
+- The old `get_dashboard_stats()` RPC signature (replaced with one that no
+  longer reports book/order counts).
 
 If any order or book data in that project has value, this is the only
 chance to keep it. There is no undo once 010 runs other than restoring from
@@ -420,11 +418,10 @@ work; it structurally cannot, independent of any configuration step above.
 ### Doctor
 
 1. Sign in with the emailed one-time code (staff passwordless path).
-2. Expect a first-login prompt to self-select which courses you teach
-   (`set_doctor_courses()`  — this is intentional forced onboarding per
-   migration `012`, not a seeding gap). Select one or more courses from the
-   existing catalogue.
-3. Publish a course material and/or an assignment for a selected course.
+2. Confirm that one or more university-synchronized teaching assignments are
+   visible. Doctors cannot self-declare courses; council/admin synchronization
+   is authoritative.
+3. Publish a course material and/or an assignment for an assigned course.
 4. Submit an exam for committee review (`submit_exam_for_review`) —
    **test this one early, not last.** The Edge Function it depends on for
    the committee's approval half, `approve-exam-submission`, has never been

@@ -74,6 +74,34 @@ export interface InstructorAlias {
 
 export interface DoctorOption { id: string; full_name: string; }
 
+export interface CouncilDoctorCourseOption {
+  doctor_course_id: string;
+  doctor_id: string;
+  doctor_name: string;
+  course_id: string;
+  course_code: string | null;
+  course_title: string;
+  course_title_fr: string;
+  language: "french" | "english";
+  semester: string;
+  academic_year: string;
+  major: string;
+}
+
+export interface CouncilBookReplacementContext {
+  book_id: string;
+  doctor_id: string;
+  doctor_name: string;
+  doctor_course_id: string;
+  course_id: string;
+  course_code: string | null;
+  course_title: string;
+  course_title_fr: string;
+  language: "french" | "english";
+  semester: string;
+  academic_year: string;
+}
+
 export const COURSE_BOOK_MIME_TYPES = [
   "application/pdf",
   "application/vnd.openxmlformats-officedocument.presentationml.presentation",
@@ -111,7 +139,7 @@ export async function getCourseBookUrl(storagePath: string) {
   return { url: data?.signedUrl ?? null, error };
 }
 
-export async function reviewCourseBook(bookId: string, doctorCourseId: string, decision: "confirmed" | "rejected") {
+export async function reviewCourseBook(bookId: string, doctorCourseId: string, decision: "confirmed") {
   const { data, error } = await db.rpc("review_course_book", {
     p_book_id: bookId,
     p_doctor_course_id: doctorCourseId,
@@ -134,6 +162,7 @@ export async function uploadCourseBook(input: {
   courseId?: string;
   originalBookId?: string;
   doctorCourseId?: string;
+  doctorCourseIds?: string[];
   rejectionReason?: string;
 }) {
   const error = validBookFile(input.file);
@@ -147,6 +176,7 @@ export async function uploadCourseBook(input: {
   if (input.courseId) form.append("courseId", input.courseId);
   if (input.originalBookId) form.append("originalBookId", input.originalBookId);
   if (input.doctorCourseId) form.append("doctorCourseId", input.doctorCourseId);
+  if (input.doctorCourseIds) form.append("doctorCourseIds", JSON.stringify(input.doctorCourseIds));
   if (input.rejectionReason) form.append("rejectionReason", input.rejectionReason.trim());
 
   const { data, error: invokeError, response } = await supabase.functions.invoke<{ book?: CourseBook; error?: string }>(
@@ -188,6 +218,16 @@ export async function getInstructorAliases() {
 export async function getDoctorsForAliases() {
   const { data, error } = await db.from("profiles").select("id, full_name").eq("role", "doctor").order("full_name");
   return { data: (data ?? []) as DoctorOption[], error: error as Error | null };
+}
+
+export async function getCouncilDoctorCourseOptions() {
+  const { data, error } = await db.rpc("get_council_doctor_course_options");
+  return { data: (data ?? []) as CouncilDoctorCourseOption[], error: error as Error | null };
+}
+
+export async function getCouncilBookReplacementContext() {
+  const { data, error } = await db.rpc("get_council_book_replacement_context");
+  return { data: (data ?? []) as CouncilBookReplacementContext[], error: error as Error | null };
 }
 
 export async function setInstructorAlias(alias: string, doctorId: string, note = "") {

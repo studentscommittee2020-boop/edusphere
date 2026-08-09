@@ -32,6 +32,8 @@ interface AuthContextValue {
   isVerifiedStudent: boolean;
   /** True only after a verified authenticator-app factor upgrades the session to AAL2. */
   isMfaVerified: boolean;
+  /** True when the account has opted into an authenticator factor. */
+  hasMfaFactor: boolean;
   isAuthenticated: boolean;
   signIn: (
     email: string,
@@ -85,6 +87,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     devAccount?.isVerifiedStudent ?? false,
   );
   const [isMfaVerified, setIsMfaVerified] = useState(!!devAccount);
+  const [hasMfaFactor, setHasMfaFactor] = useState(false);
 
   // ── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -132,15 +135,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setTelemetryUser(sess.user.id);
         setIsDoctor(prof?.role === "doctor");
         setIsCommitteeAdmin(prof?.role === "committee_admin");
+        // Student routes are student-only. Staff permissions are represented
+        // by their own role flags; conflating them made owner/doctor accounts
+        // inherit the entire "My Academics" portal.
         setIsVerifiedStudent(
-          adminFlag ||
-            ownerFlag ||
-            prof?.role === "doctor" ||
-            prof?.role === "committee_admin" ||
-            sess.user.app_metadata?.student_verified === true,
+          prof?.role === "student" && sess.user.app_metadata?.student_verified === true,
         );
         const { data: assurance } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
         setIsMfaVerified(assurance?.currentLevel === "aal2");
+        setHasMfaFactor(assurance?.nextLevel === "aal2");
       } else {
         setUser(null);
         setSession(null);
@@ -153,6 +156,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setIsCommitteeAdmin(false);
         setIsVerifiedStudent(false);
         setIsMfaVerified(false);
+        setHasMfaFactor(false);
       }
       setIsLoading(false);
     },
@@ -211,7 +215,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const [freshAdmin, freshOwner] = await Promise.all([checkAdmin(), checkOwner()]);
       setIsAdmin(freshAdmin || freshOwner);
       setIsOwner(freshOwner);
-      setIsVerifiedStudent((current) => current || freshAdmin || freshOwner);
     }, ADMIN_REFRESH_MS);
     return () => clearInterval(interval);
   }, [user, checkAdmin, checkOwner]);
@@ -288,6 +291,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     isCommitteeAdmin,
     isVerifiedStudent,
     isMfaVerified,
+    hasMfaFactor,
     isAuthenticated: !!user || !!devAccount,
     signIn,
     signUp,

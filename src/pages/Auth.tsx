@@ -21,7 +21,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/lib/supabase";
-import { canBypassReviewMfa, canBypassReviewPhone } from "@/lib/reviewAccess";
+import { canBypassReviewPhone } from "@/lib/reviewAccess";
 import {
   requestStudentOtp,
   verifyStudentOtp,
@@ -166,7 +166,8 @@ export default function Auth() {
   const [mfaSecret, setMfaSecret] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
-  const nextPath = (location.state as { next?: string } | null)?.next || "/";
+  const authState = location.state as { next?: string; setupMfa?: boolean } | null;
+  const nextPath = authState?.next || "/";
   const preparedReviewSelected = canBypassReviewPhone(email);
 
   const authBackLabel = (() => {
@@ -194,66 +195,64 @@ export default function Auth() {
     navigate("/");
   }
 
-  /** Temporary shortcut for the four prepared dean/staff review accounts.
-      The authenticated database role is still checked before it is applied. */
+  /** Temporary phone shortcut for the four prepared review identities. The
+      route gate independently requires a real staff role before it honors the
+      same exception, so this screen does not need three fragile role RPCs. */
   async function isPreparedReviewAccount(): Promise<boolean> {
     const { data: { user: activeUser } } = await supabase.auth.getUser();
-    if (!activeUser || !canBypassReviewMfa(activeUser.email)) return false;
-    const [profileResult, adminResult, ownerResult] = await Promise.all([
-      supabase.from("profiles").select("role").eq("id", activeUser.id).single(),
-      supabase.rpc("is_admin"),
-      supabase.rpc("is_owner"),
-    ]);
-    const role = profileResult.data?.role;
-    return Boolean(adminResult.data || ownerResult.data || role === "doctor" || role === "committee_admin" || role === "admin");
+    return canBypassReviewPhone(activeUser?.email);
   }
 
-  async function beginMfaFlow() {
+  async function beginMfaFlow(enrollIfMissing = false): Promise<"portal" | "mfa" | null> {
     const { data, error } = await supabase.auth.mfa.listFactors();
     if (error) {
       toast.error("We could not check your authenticator setup. Please try again.");
-      return;
+      return null;
     }
     const factor = data.totp.find((item) => item.status === "verified");
     if (factor) {
       setMfaFactorId(factor.id);
       setMode("mfaChallenge");
-    } else {
-      setMode("mfaEnroll");
+      return "mfa";
     }
+    if (enrollIfMissing) {
+      setMode("mfaEnroll");
+      return "mfa";
+    }
+    await refreshProfile();
+    navigate(nextPath, { replace: true });
+    return "portal";
   }
 
-  async function savePhoneAndBeginMfa() {
+  async function savePhoneAndContinue(): Promise<"portal" | "mfa" | null> {
     const normalized = normalizePhone(phone);
     if (!normalized) {
       toast.error("Enter a valid international phone number, for example +96170123456.");
-      return false;
+      return null;
     }
     const { data: { user: activeUser } } = await supabase.auth.getUser();
     if (!activeUser) {
       toast.error("Your sign-in session expired. Please sign in again.");
-      return false;
+      return null;
     }
     const { error } = await supabase.from("profiles").update({ phone: normalized }).eq("id", activeUser.id);
     if (error) {
       toast.error("We could not securely save your phone number. Please try again.");
-      return false;
+      return null;
     }
     // Keep the route gate's profile snapshot in sync before MFA completes;
     // otherwise a newly saved phone can briefly look missing and redirect back
     // to this screen.
     await refreshProfile();
-    await beginMfaFlow();
-    return true;
+    return beginMfaFlow(false);
   }
 
   async function continueStaffAuthentication(): Promise<"portal" | "mfa" | null> {
     if (await isPreparedReviewAccount()) {
       await refreshProfile();
-      navigate(nextPath, { replace: true });
-      return "portal";
+      return beginMfaFlow(false);
     }
-    return (await savePhoneAndBeginMfa()) ? "mfa" : null;
+    return savePhoneAndContinue();
   }
 
   useEffect(() => {
@@ -261,7 +260,11 @@ export default function Auth() {
     void (async () => {
       if (await isPreparedReviewAccount()) {
         await refreshProfile();
-        navigate(nextPath, { replace: true });
+        await beginMfaFlow(false);
+        return;
+      }
+      if (authState?.setupMfa) {
+        await beginMfaFlow(true);
         return;
       }
       const { data } = await supabase.from("profiles").select("phone").eq("id", user.id).single();
@@ -270,9 +273,9 @@ export default function Auth() {
         return;
       }
       setPhone(data?.phone ?? "");
-      await beginMfaFlow();
+      await beginMfaFlow(false);
     })();
-  }, [user?.id]);
+  }, [user?.id, authState?.setupMfa]);
 
   async function handleStudentRequest(event: React.FormEvent) {
     event.preventDefault();
@@ -304,7 +307,9 @@ export default function Auth() {
       return;
     }
 
-    if (await savePhoneAndBeginMfa()) toast.success("Student access confirmed. Complete secure access below.");
+    const destination = await savePhoneAndContinue();
+    if (destination === "portal") toast.success("Student access confirmed.");
+    if (destination === "mfa") toast.success("Student access confirmed. Complete your authenticator challenge.");
   }
 
   async function handleStaffLogin(event: React.FormEvent) {
@@ -381,7 +386,7 @@ export default function Auth() {
   async function handlePhoneSetup(event: React.FormEvent) {
     event.preventDefault();
     setIsLoading(true);
-    await savePhoneAndBeginMfa();
+    await savePhoneAndContinue();
     setIsLoading(false);
   }
 
@@ -461,11 +466,11 @@ export default function Auth() {
           type="button"
           onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
           className="absolute right-5 top-5 z-20 rounded-xl border border-border bg-background/80 p-2 text-foreground transition-colors hover:bg-muted"
-          aria-label={`Switch to ${theme === "dark" ? "light" : "dark"} mode`}
+          aria-label={theme === "dark" ? "Switch to high-contrast mode" : "Switch to dark mode"}
         >
           {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
         </button>
-        <section className="p-8 sm:p-10 md:p-12 bg-gradient-to-br from-red-600/20 via-red-950/20 to-transparent border-b md:border-b-0 md:border-r border-border flex flex-col justify-between min-h-[290px]">
+        <section className="order-2 p-8 sm:p-10 md:order-1 md:p-12 bg-gradient-to-br from-red-600/20 via-red-950/20 to-transparent border-t md:border-t-0 md:border-r border-border flex flex-col justify-between min-h-[290px]">
           <div>
             <div className="inline-flex items-center gap-3">
               <img src="/logo.svg" alt="EduSphere logo" className="w-12 h-12 rounded-2xl bg-white p-1" />
@@ -502,7 +507,7 @@ export default function Auth() {
           </div>
         </section>
 
-        <section className="p-8 sm:p-10 md:p-12">
+        <section className="order-1 p-8 pt-20 sm:p-10 sm:pt-20 md:order-2 md:p-12">
           <AnimatePresence mode="wait">
             <motion.div
               key={mode}

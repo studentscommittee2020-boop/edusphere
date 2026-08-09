@@ -271,7 +271,7 @@ export default function Sidebar() {
                       to={item.to}
                       onClick={closeMobile}
                       className={cn(
-                        "relative flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors duration-200 group",
+                        "relative flex min-h-[44px] items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors duration-200 group",
                         active
                           ? "text-foreground"
                           : "text-muted-foreground hover:text-foreground hover:bg-muted",
@@ -373,7 +373,7 @@ export default function Sidebar() {
               <Moon className="mr-1 inline h-3.5 w-3.5" />{language === "fr" ? "Sombre" : "Dark"}
             </button>
             <button type="button" onClick={() => setTheme("light")} aria-pressed={theme === "light"} className={cn("min-h-[44px] rounded-md px-2 text-xs font-semibold transition-colors", theme === "light" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:bg-background/60 hover:text-foreground")}>
-              <Sun className="mr-1 inline h-3.5 w-3.5" />{language === "fr" ? "Clair" : "Light"}
+              <Sun className="mr-1 inline h-3.5 w-3.5" />{language === "fr" ? "Contraste" : "Contrast"}
             </button>
           </div>
         </div>
@@ -386,7 +386,7 @@ export default function Sidebar() {
               closeMobile();
               window.location.href = "/auth";
             }}
-            className="flex items-center gap-3 w-full px-3 py-2 rounded-lg text-sm text-muted-foreground hover:text-red-400 hover:bg-white/[0.04] transition-colors duration-200"
+            className="flex min-h-[44px] items-center gap-3 w-full px-3 py-2 rounded-lg text-sm text-muted-foreground hover:bg-muted hover:text-destructive transition-colors duration-200"
           >
             <LogOut className={iconClass} />
             <span className="font-display font-semibold text-sm">
@@ -430,7 +430,7 @@ export default function Sidebar() {
           type="button"
           onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
           className="ml-auto min-h-[44px] min-w-[44px] p-2 rounded-lg hover:bg-muted transition-colors"
-          aria-label={`Switch to ${theme === "dark" ? "light" : "dark"} mode`}
+          aria-label={theme === "dark" ? "Switch to high-contrast mode" : "Switch to dark mode"}
         >
           {theme === "dark" ? <Sun className="w-5 h-5 text-foreground" /> : <Moon className="w-5 h-5 text-foreground" />}
         </button>

@@ -9,7 +9,7 @@ import type { Course, ExamType, Major, Semester, Track } from "@/types/database"
  *
  * src/types/database.ts predates migration 012 (another agent is
  * regenerating it from the live schema in parallel with this file), so
- * doctor_courses, exam_submissions, set_doctor_courses() and
+ * doctor_courses, exam_submissions and
  * submit_exam_for_review() are all absent from the `Database` type the
  * `supabase` client is constructed with in src/lib/supabase.ts — calling
  * them through the typed client would not compile (unknown table/function
@@ -73,43 +73,6 @@ export interface ExamSubmission {
 }
 
 // ── Teaching assignments ─────────────────────────────────────────────────────
-
-export interface CourseAssignmentInput {
-  course_id: string;
-  academic_year: string;
-  semester: Semester;
-}
-
-/**
- * Replaces the signed-in doctor's ENTIRE teaching load in one call.
- *
- * Wraps `set_doctor_courses(p_assignments JSONB)` — SECURITY DEFINER,
- * resolves the acting identity through `effective_user_id()`
- * (impersonation-aware) and separately re-verifies that identity is really
- * a doctor via `is_target_role(v_actor_id, 'doctor')`, independent of the
- * `is_doctor()` permission check it runs against the real caller. This is a
- * full REPLACE, not a merge/upsert: pass the complete desired set every
- * time — any existing row not present in `assignments` is deleted. The RPC
- * validates every entry (known `course_id`, `semester` in LS1..LS9) before
- * writing anything, so one bad row rejects the whole call rather than
- * leaving a partially-replaced teaching load.
- *
- * Raises, surfaced verbatim as `error.message` (not swallowed or reworded
- * here — callers should show it as-is):
- *   "Only a doctor may set their own teaching assignments" — real caller isn't a doctor.
- *   "The acting user is not a doctor" — impersonation target isn't a doctor.
- *   "p_assignments must be a JSON array"
- *   "Too many course assignments in a single call" — over 100 entries.
- *   "Each assignment needs course_id, academic_year and semester"
- *   "Unknown course_id %" / "Invalid semester %"
- */
-export async function setDoctorCourses(assignments: CourseAssignmentInput[]) {
-  const { data, error } = await db.rpc("set_doctor_courses", {
-    p_assignments: assignments,
-  });
-  if (error) return { data: null, error };
-  return { data: (data ?? []) as DoctorCourse[], error: null };
-}
 
 /** The signed-in doctor's own teaching assignments, joined to the course for display. */
 export async function getDoctorCourses(doctorId: string) {
